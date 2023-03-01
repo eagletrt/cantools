@@ -380,6 +380,18 @@ SIGNAL_DECLARATION_ENCODE_FMT = '''\
 
 '''
 
+MESSAGE_DECLARATION_RAW_TO_CONVERSION_STRUCT = '''
+void {database_name}_{message_name}_raw_to_conversion_struct(
+    {struct_type_out} *conversion, 
+    {struct_type_in} *raw);
+'''
+
+MESSAGE_DECLARATION_CONVERSION_TO_RAW_STRUCT = '''
+void {database_name}_{message_name}_conversion_to_raw_struct(
+    {struct_type_in} *raw,
+    {struct_type_out} *conversion);
+'''
+
 SIGNAL_DECLARATION_DECODE_FMT = '''\
 /**
  * Decode given signal by applying scaling and offset.
@@ -476,6 +488,30 @@ int {database_name}_{message_name}_unpack(
 {unpack_body}
     return (0);
 }}
+'''
+
+MESSAGE_DEFINITION_RAW_TO_CONVERSION_STRUCT = '''
+void {database_name}_{message_name}_raw_to_conversion_struct(
+    {struct_type_out} *conversion, 
+    {struct_type_in} *raw)
+{{
+'''
+
+MESSAGE_DEFINITION_CONVERSION_TO_RAW_STRUCT = '''
+void {database_name}_{message_name}_conversion_to_raw_struct(
+    {struct_type_in} *raw,
+    {struct_type_out} *conversion)
+{{
+'''
+
+SIGNAL_DEFINITION_RAW_TO_CONVERT_FLOAT = '''    conversion->{signal_name} = {database_name}_{message_name}_{signal_name}_decode(raw->{signal_name}); 
+'''
+SIGNAL_DEFINITION_CONVERT_TO_RAW_FLOAT = '''    raw->{signal_name} = {database_name}_{message_name}_{signal_name}_encode(conversion->{signal_name}); 
+'''
+
+SIGNAL_DEFINITION_RAW_TO_CONVERT = '''    conversion->{signal_name} = raw->{signal_name}; 
+'''
+SIGNAL_DEFINITION_CONVERT_TO_RAW = '''    raw->{signal_name} = conversion->{signal_name}; 
 '''
 
 SIGNAL_DEFINITION_ENCODE_FMT = '''\
@@ -849,6 +885,32 @@ def _format_range(signal):
     else:
         return '-'
 
+def _generate_signal_converted(signal, bit_fields):
+    comment = _format_comment(signal.comment)
+    range_ = _format_range(signal)
+    scale = _get(signal.scale, '-')
+    offset = _get(signal.offset, '-')
+
+    if signal.is_float or not bit_fields:
+        length = ''
+    else:
+        length = ' : {}'.format(signal.length)
+
+    #signal.is_float non funziona
+    if scale % 1 == 0:
+        _type = signal.type_name
+    else:
+        _type = 'float'
+
+    member = SIGNAL_MEMBER_FMT.format(comment=comment,
+                                      range=range_,
+                                      scale=scale,
+                                      offset=offset,
+                                      type_name=_type,
+                                      name=signal.snake_name,
+                                      length=length)
+
+    return member
 
 def _generate_signal(signal, bit_fields):
     comment = _format_comment(signal.comment)
@@ -1150,6 +1212,26 @@ def _format_unpack_code(message, helper_kinds, node_name):
 
     return '\n'.join(variable_lines), '\n'.join(body_lines)
 
+def _generate_struct_converted(message, bit_fields):
+    members = []
+
+    for signal in message.signals:
+        members.append(_generate_signal_converted(signal, bit_fields))
+
+    if not members:
+        members = [
+            '    /**\n'
+            '     * Dummy signal in empty message.\n'
+            '     */\n'
+            '    uint8_t dummy;'
+        ]
+
+    if message.comment is None:
+        comment = ''
+    else:
+        comment = ' * {}\n *\n'.format(message.comment)
+
+    return comment, members
 
 def _generate_struct(message, bit_fields):
     members = []
@@ -1363,6 +1445,13 @@ def _generate_structs(database_name, messages, bit_fields, node_name):
                                 message_name=message.snake_name,
                                 database_name=database_name,
                                 members='\n\n'.join(members)))
+            comment, members = _generate_struct_converted(message, bit_fields)
+            structs.append(
+                STRUCT_FMT.format(comment=comment,
+                                database_message_name=message.name,
+                                message_name=message.snake_name + "_converted",
+                                database_name=database_name,
+                                members='\n\n'.join(members)))
 
     return '\n'.join(structs)
 
@@ -1419,6 +1508,17 @@ def _generate_declarations(database_name, messages, floating_point_numbers, use_
                 
                 signal_declarations.append(signal_declaration)
         declaration = ""
+
+        declarations.append(MESSAGE_DECLARATION_RAW_TO_CONVERSION_STRUCT.format(database_name=database_name,
+                                                                    message_name=message.snake_name,
+                                                                    struct_type_out=f"struct {database_name}_{message.snake_name}_converted_t",
+                                                                    struct_type_in=f"const struct {database_name}_{message.snake_name}_t"))
+
+        declarations.append(MESSAGE_DECLARATION_CONVERSION_TO_RAW_STRUCT.format(database_name=database_name,
+                                                                    message_name=message.snake_name,
+                                                                    struct_type_in=f"struct {database_name}_{message.snake_name}_t",
+                                                                    struct_type_out=f"const struct {database_name}_{message.snake_name}_converted_t"))
+
         if is_sender:
             declaration += DECLARATION_PACK_FMT.format(database_name=database_name,
                                                        database_message_name=message.name,
@@ -1447,6 +1547,16 @@ def _generate_definitions(database_name, messages, floating_point_numbers, use_f
         is_sender = _is_sender(message, node_name)
         is_receiver = node_name is None
 
+        message_raw_to_conversion = MESSAGE_DEFINITION_RAW_TO_CONVERSION_STRUCT.format(database_name=database_name,
+                                                                                message_name=message.snake_name,
+                                                                                struct_type_out=f"struct {database_name}_{message.snake_name}_converted_t",
+                                                                                struct_type_in=f"const struct {database_name}_{message.snake_name}_t")
+
+        message_conversion_to_raw = MESSAGE_DEFINITION_CONVERSION_TO_RAW_STRUCT.format(database_name=database_name,
+                                                                    message_name=message.snake_name,
+                                                                    struct_type_in=f"struct {database_name}_{message.snake_name}_t",
+                                                                    struct_type_out=f"const struct {database_name}_{message.snake_name}_converted_t")
+
         for signal, (encode, decode), check in zip(message.signals,
                                                    _generate_encode_decode(message, use_float),
                                                    _generate_is_in_range(message)):
@@ -1459,9 +1569,19 @@ def _generate_definitions(database_name, messages, floating_point_numbers, use_f
                 unused = ''
 
             signal_definition = ''
+            is_float = False
 
             if floating_point_numbers:
                 if is_sender:
+                    is_float = True
+                    message_raw_to_conversion += SIGNAL_DEFINITION_RAW_TO_CONVERT_FLOAT.format(signal_name=signal.snake_name,
+                                                                        database_name=database_name,
+                                                                        message_name=message.snake_name)
+
+                    message_conversion_to_raw += SIGNAL_DEFINITION_CONVERT_TO_RAW_FLOAT.format(signal_name=signal.snake_name,
+                                                                        database_name=database_name,
+                                                                        message_name=message.snake_name)
+
                     signal_definition += SIGNAL_DEFINITION_ENCODE_FMT.format(
                         database_name=database_name,
                         message_name=message.snake_name,
@@ -1478,6 +1598,10 @@ def _generate_definitions(database_name, messages, floating_point_numbers, use_f
                         decode=decode,
                         floating_point_type=_get_floating_point_type(use_float))
 
+            if not is_float:
+                message_raw_to_conversion += SIGNAL_DEFINITION_RAW_TO_CONVERT.format(signal_name=signal.snake_name)
+                message_conversion_to_raw += SIGNAL_DEFINITION_CONVERT_TO_RAW.format(signal_name=signal.snake_name)
+
             if is_sender or _is_receiver(signal, node_name):
                 signal_definition += SIGNAL_DEFINITION_IS_IN_RANGE_FMT.format(
                     database_name=database_name,
@@ -1488,6 +1612,9 @@ def _generate_definitions(database_name, messages, floating_point_numbers, use_f
                     check=check)
 
                 signal_definitions.append(signal_definition)
+                
+        signal_definitions.append(message_raw_to_conversion+"}\n")
+        signal_definitions.append(message_conversion_to_raw+"}\n")
 
         if message.length > 0:
             pack_variables, pack_body = _format_pack_code(message,
