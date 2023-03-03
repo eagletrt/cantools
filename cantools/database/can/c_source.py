@@ -4,6 +4,16 @@ from decimal import Decimal
 
 from ...version import __version__
 
+type_to_specifier = {"uint8_t": "%u",
+                    "uint16_t": "%u",
+                    "uint32_t": "%u",
+                    "uint64_t": "%u",
+                    "int8_t": "%d",
+                    "int16_t": "%d",
+                    "int32_t": "%d",
+                    "int64_t": "%d",
+                    "float": "%f",
+                    "double": "%f"}
 
 HEADER_FMT = '''\
 /**
@@ -38,6 +48,8 @@ HEADER_FMT = '''\
 
 #ifndef {include_guard}
 #define {include_guard}
+
+#include <stdio.h>
 
 #ifdef __cplusplus
 extern "C" {{
@@ -602,6 +614,47 @@ SIGNAL_MEMBER_FMT = '''\
     {type_name} {name}{length};\
 '''
 
+MESSAGE_DECLARATION_TO_STRING = '''int {database_name}_{message_name}_to_string(struct {database_name}_{message_name}_converted_t *message, char *buffer);
+'''
+
+MESSAGE_DEFINITION_TO_STRING = '''int {database_name}_{message_name}_to_string(struct {database_name}_{message_name}_converted_t *message, char *buffer){{
+    return sprintf(
+        buffer,
+'''
+
+SIGNAL_DEFINITION_SPECIFIER = '''    "{specifier}"","
+'''
+SIGNAL_DEFINITION_TO_STRING = '''    message->{signal_name},
+'''
+
+MESSAGE_DECLARATION_FIELDS = '''int {database_name}_{message_name}_fields(char *buffer);
+'''
+
+MESSAGE_DEFINITION_FIELDS = '''int {database_name}_{message_name}_fields(char *buffer){{
+    return sprintf(
+        buffer,
+'''
+
+SIGNAL_DEFINITION_FIELDS = '''    "{signal_name}"",",
+'''
+
+#FILE
+
+MESSAGE_DECLARATION_TO_STRING_FILE = '''int {database_name}_{message_name}_to_string_file(struct {database_name}_{message_name}_converted_t *message, FILE *buffer);
+'''
+
+MESSAGE_DEFINITION_TO_STRING_FILE = '''int {database_name}_{message_name}_to_string_file(struct {database_name}_{message_name}_converted_t *message, FILE *buffer){{
+    return fprintf(
+        buffer,
+'''
+
+MESSAGE_DECLARATION_FIELDS_FILE = '''int {database_name}_{message_name}_fields_file(FILE *buffer);
+'''
+
+MESSAGE_DEFINITION_FIELDS_FILE = '''int {database_name}_{message_name}_fields_file(FILE *buffer){{
+    return fprintf(
+        buffer,
+'''
 
 class Signal:
 
@@ -1551,8 +1604,8 @@ def _generate_declarations(database_name, messages, floating_point_numbers, use_
                 signal_declarations.append(signal_declaration)
         declaration = ""
 
-        declarations.append(_get_raw_to_conversion_head(database_name, message) + ";")
-        declarations.append(_get_conversion_to_raw_head(database_name, message) + ";")
+        declarations.append(_get_raw_to_conversion_head(database_name, message) + ";\n")
+        declarations.append(_get_conversion_to_raw_head(database_name, message) + ";\n")
 
         declarations.append(MESSAGE_DECLARATION_RAW_TO_CONVERSION_STRUCT.format(database_name=database_name,
                                                                     message_name=message.snake_name,
@@ -1563,6 +1616,16 @@ def _generate_declarations(database_name, messages, floating_point_numbers, use_
                                                                     message_name=message.snake_name,
                                                                     struct_type_in=f"struct {database_name}_{message.snake_name}_t",
                                                                     struct_type_out=f"const struct {database_name}_{message.snake_name}_converted_t"))
+
+        declarations.append(MESSAGE_DECLARATION_TO_STRING.format(database_name=database_name,
+                                                                message_name=message.snake_name))
+        declarations.append(MESSAGE_DECLARATION_TO_STRING_FILE.format(database_name=database_name,
+                                                                message_name=message.snake_name))
+
+        declarations.append(MESSAGE_DECLARATION_FIELDS.format(database_name=database_name,
+                                                        message_name=message.snake_name))
+        declarations.append(MESSAGE_DECLARATION_FIELDS_FILE.format(database_name=database_name,
+                                                        message_name=message.snake_name))
 
         if is_sender:
             declaration += DECLARATION_PACK_FMT.format(database_name=database_name,
@@ -1592,6 +1655,18 @@ def _generate_definitions(database_name, messages, floating_point_numbers, use_f
         is_sender = _is_sender(message, node_name)
         is_receiver = node_name is None
 
+        message_to_string = MESSAGE_DEFINITION_TO_STRING.format(database_name=database_name,
+                                                                message_name=message.snake_name)
+        message_to_string_file = MESSAGE_DEFINITION_TO_STRING_FILE.format(database_name=database_name,
+                                                                message_name=message.snake_name)
+        signals_specifiers = ""
+        signals_to_string = ""
+        message_fields_string = MESSAGE_DEFINITION_FIELDS.format(database_name=database_name,
+                                                        message_name=message.snake_name)
+        message_fields_file = MESSAGE_DEFINITION_FIELDS_FILE.format(database_name=database_name,
+                                                        message_name=message.snake_name)
+        message_fields = ""
+
         message_raw_to_conversion = _get_raw_to_conversion_head(database_name, message) + "{\n"
         message_conversion_to_raw = _get_conversion_to_raw_head(database_name, message) + "{\n"
 
@@ -1617,8 +1692,11 @@ def _generate_definitions(database_name, messages, floating_point_numbers, use_f
                 unused = ''
 
             signal_definition = ''
+            signals_to_string += SIGNAL_DEFINITION_TO_STRING.format(signal_name = signal.snake_name)
+            message_fields += SIGNAL_DEFINITION_FIELDS.format(signal_name = signal.snake_name)
 
             if floating_point_numbers and signal.is_float_conversion:
+                signals_specifiers += SIGNAL_DEFINITION_SPECIFIER.format(specifier = type_to_specifier["float"])
                 message_raw_to_conversion += SIGNAL_DEFINITION_RAW_TO_CONVERT_FLOAT.format(signal_name=signal.snake_name,
                                                                     database_name=database_name,
                                                                     message_name=message.snake_name)
@@ -1652,6 +1730,7 @@ def _generate_definitions(database_name, messages, floating_point_numbers, use_f
                         floating_point_type=_get_floating_point_type(use_float))
 
             if not signal.is_float_conversion:
+                signals_specifiers += SIGNAL_DEFINITION_SPECIFIER.format(specifier = type_to_specifier[signal.type_name])
                 message_raw_to_conversion_struct += SIGNAL_DEFINITION_RAW_TO_CONVERT_STRUCT.format(signal_name=signal.snake_name)
                 message_conversion_to_raw_struct += SIGNAL_DEFINITION_CONVERT_TO_RAW_STRUCT.format(signal_name=signal.snake_name)
                 message_raw_to_conversion += SIGNAL_DEFINITION_RAW_TO_CONVERT.format(signal_name=signal.snake_name)
@@ -1672,6 +1751,10 @@ def _generate_definitions(database_name, messages, floating_point_numbers, use_f
         signal_definitions.append(message_conversion_to_raw + "}\n")
         signal_definitions.append(message_raw_to_conversion_struct+"}\n")
         signal_definitions.append(message_conversion_to_raw_struct+"}\n")
+        signal_definitions.append(message_to_string + signals_specifiers[:-4] + ",\n" + signals_to_string[:-2] + ");\n}\n")
+        signal_definitions.append(message_to_string_file + signals_specifiers[:-4] + ",\n" + signals_to_string[:-2] + ");\n}\n")
+        signal_definitions.append(message_fields_string + message_fields[:-5] + ");\n}\n")
+        signal_definitions.append(message_fields_file + message_fields[:-5] + ");\n}\n")
 
         if message.length > 0:
             pack_variables, pack_body = _format_pack_code(message,
