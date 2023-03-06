@@ -656,6 +656,20 @@ MESSAGE_DEFINITION_FIELDS_FILE = '''int {database_name}_{message_name}_fields_fi
         buffer,
 '''
 
+MESSAGE_STRING_FROM_ID = '''    case {id}:
+            return {database_name}_{message_name}_to_string((struct {database_name}_{message_name}_converted_t*) message, buffer);
+    '''
+MESSAGE_FIELD_FROM_ID = '''    case {id}:
+            return {database_name}_{message_name}_fields(buffer);
+    '''
+
+MESSAGE_FILE_FROM_ID = '''    case {id}:
+            return {database_name}_{message_name}_to_string_file((struct {database_name}_{message_name}_converted_t*) message, buffer);
+    '''
+MESSAGE_FIELD_FILE_FROM_ID = '''    case {id}:
+            return {database_name}_{message_name}_fields_file(buffer);
+    '''
+
 class Signal:
 
     def __init__(self, signal):
@@ -1627,6 +1641,11 @@ def _generate_declarations(database_name, messages, floating_point_numbers, use_
         declarations.append(MESSAGE_DECLARATION_FIELDS_FILE.format(database_name=database_name,
                                                         message_name=message.snake_name))
 
+        declarations.append('int primary_to_string_from_id(uint16_t message_id, void* message, char* buffer);')
+        declarations.append('int primary_fields_from_id(uint16_t message_id, char* buffer);')
+        declarations.append('int primary_to_string_file_from_id(uint16_t message_id, void* message, char* buffer);')
+        declarations.append('int primary_fields_file_from_id(uint16_t message_id, char* buffer);')
+
         if is_sender:
             declaration += DECLARATION_PACK_FMT.format(database_name=database_name,
                                                        database_message_name=message.name,
@@ -1650,11 +1669,37 @@ def _generate_definitions(database_name, messages, floating_point_numbers, use_f
     pack_helper_kinds = set()
     unpack_helper_kinds = set()
 
+    to_string_from_id = '''int primary_to_string_from_id(uint16_t message_id, void* message, char* buffer) {
+    switch (message_id) {
+    '''
+    fields_from_id = '''int primary_fields_from_id(uint16_t message_id, char* buffer) {
+    switch (message_id) {
+    '''
+    to_string_file_from_id = '''int primary_to_string_file_from_id(uint16_t message_id, void* message, char* buffer) {
+    switch (message_id) {
+    '''
+    fields_file_from_id = '''int primary_fields_file_from_id(uint16_t message_id, char* buffer) {
+    switch (message_id) {
+    '''
+
     for message in messages:
         signal_definitions = []
         is_sender = _is_sender(message, node_name)
         is_receiver = node_name is None
 
+        to_string_from_id += MESSAGE_STRING_FROM_ID.format(id=message._message._frame_id,
+                                                            database_name=database_name,
+                                                            message_name=message.snake_name)
+        fields_from_id += MESSAGE_FIELD_FROM_ID.format(id=message._message._frame_id,
+                                                            database_name=database_name,
+                                                            message_name=message.snake_name)
+        to_string_file_from_id += MESSAGE_FILE_FROM_ID.format(id=message._message._frame_id,
+                                                            database_name=database_name,
+                                                            message_name=message.snake_name)
+        fields_file_from_id += MESSAGE_FIELD_FILE_FROM_ID.format(id=message._message._frame_id,
+                                                            database_name=database_name,
+                                                            message_name=message.snake_name)
+                                                            
         message_to_string = MESSAGE_DEFINITION_TO_STRING.format(database_name=database_name,
                                                                 message_name=message.snake_name)
         message_to_string_file = MESSAGE_DEFINITION_TO_STRING_FILE.format(database_name=database_name,
@@ -1798,6 +1843,11 @@ def _generate_definitions(database_name, messages, floating_point_numbers, use_f
 
         if definition:
             definitions.append(definition)
+    
+    definitions.append(to_string_from_id + "}\n\treturn 0;\n}\n")
+    definitions.append(fields_from_id + "}\n\treturn 0;\n}\n")
+    definitions.append(to_string_file_from_id + "}\n\treturn 0;\n}\n")
+    definitions.append(fields_file_from_id + "}\n\treturn 0;\n}\n")
 
     return '\n'.join(definitions), (pack_helper_kinds, unpack_helper_kinds)
 
@@ -1908,6 +1958,7 @@ def generate(database,
 
     date = time.ctime()
     messages = [Message(message) for message in database.messages]
+    #messages[0]._message._frame_id
     include_guard = f'{database_name.upper()}_H'
     frame_id_defines = _generate_frame_id_defines(database_name, messages, node_name)
     frame_length_defines = _generate_frame_length_defines(database_name,
