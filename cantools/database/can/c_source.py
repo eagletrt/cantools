@@ -404,6 +404,11 @@ void {database_name}_{message_name}_conversion_to_raw_struct(
     {struct_type_out} *conversion);
 '''
 
+SIGNAL_ENUM_START_DECLARATION = '''typedef enum {
+'''
+SIGNAL_ENUM_END_DECLARATION = '''}} {type_name};
+'''
+
 SIGNAL_DECLARATION_DECODE_FMT = '''\
 /**
  * Decode given signal by applying scaling and offset.
@@ -682,6 +687,10 @@ class Signal:
     @property
     def unit(self):
         return _get(self._signal.unit, '-')
+    
+    @property
+    def is_enum(self):
+        return self._signal.choices != None
 
     @property
     def type_length(self):
@@ -977,7 +986,7 @@ def _format_range(signal):
     else:
         return '-'
 
-def _generate_signal_converted(signal, bit_fields):
+def _generate_signal_converted(signal, bit_fields, database_name, message):
     comment = _format_comment(signal.comment)
     range_ = _format_range(signal)
     scale = _get(signal.scale, '-')
@@ -987,6 +996,15 @@ def _generate_signal_converted(signal, bit_fields):
         length = ''
     else:
         length = ' : {}'.format(signal.length)
+
+    if signal.is_enum:
+        return SIGNAL_MEMBER_FMT.format(comment=comment,
+                                      range=range_,
+                                      scale=scale,
+                                      offset=offset,
+                                      type_name=f"{database_name}_{message.snake_name}_{signal.snake_name}",
+                                      name=signal.snake_name,
+                                      length=length)
 
     #signal.is_float non funziona
     if signal.is_float_conversion:
@@ -1004,7 +1022,7 @@ def _generate_signal_converted(signal, bit_fields):
 
     return member
 
-def _generate_signal(signal, bit_fields):
+def _generate_signal(signal, bit_fields, database_name, message):
     comment = _format_comment(signal.comment)
     range_ = _format_range(signal)
     scale = _get(signal.scale, '-')
@@ -1014,6 +1032,15 @@ def _generate_signal(signal, bit_fields):
         length = ''
     else:
         length = f' : {signal.length}'
+
+    if signal.is_enum:
+        return SIGNAL_MEMBER_FMT.format(comment=comment,
+                                      range=range_,
+                                      scale=scale,
+                                      offset=offset,
+                                      type_name=f"{database_name}_{message.snake_name}_{signal.snake_name}",
+                                      name=signal.snake_name,
+                                      length=length)
 
     member = SIGNAL_MEMBER_FMT.format(comment=comment,
                                       range=range_,
@@ -1304,11 +1331,11 @@ def _format_unpack_code(message, helper_kinds, node_name):
 
     return '\n'.join(variable_lines), '\n'.join(body_lines)
 
-def _generate_struct_converted(message, bit_fields):
+def _generate_struct_converted(message, bit_fields, database_name):
     members = []
 
     for signal in message.signals:
-        members.append(_generate_signal_converted(signal, bit_fields))
+        members.append(_generate_signal_converted(signal, bit_fields, database_name, message))
 
     if not members:
         members = [
@@ -1325,11 +1352,11 @@ def _generate_struct_converted(message, bit_fields):
 
     return comment, members
 
-def _generate_struct(message, bit_fields):
+def _generate_struct(message, bit_fields, database_name):
     members = []
 
     for signal in message.signals:
-        members.append(_generate_signal(signal, bit_fields))
+        members.append(_generate_signal(signal, bit_fields, database_name, message))
 
     if not members:
         members = [
@@ -1529,15 +1556,24 @@ def _generate_structs(database_name, messages, bit_fields, node_name):
     structs = []
 
     for message in messages:
+        for signal in message.signals:
+            if signal.is_enum:
+                enum = SIGNAL_ENUM_START_DECLARATION
+                for choice in signal._signal.choices:
+                    enum += f"\t{database_name}_{message.snake_name}_{signal.snake_name}_{signal._signal.choices[choice]} = {choice},\n"
+                enum += SIGNAL_ENUM_END_DECLARATION.format(type_name = f"{database_name}_{message.snake_name}_{signal.snake_name}")
+                structs.append(enum)
+
+    for message in messages:
         if _is_sender_or_receiver(message, node_name):
-            comment, members = _generate_struct(message, bit_fields)
+            comment, members = _generate_struct(message, bit_fields, database_name)
             structs.append(
                 STRUCT_FMT.format(comment=comment,
                                 database_message_name=message.name,
                                 message_name=message.snake_name,
                                 database_name=database_name,
                                 members='\n\n'.join(members)))
-            comment, members = _generate_struct_converted(message, bit_fields)
+            comment, members = _generate_struct_converted(message, bit_fields, database_name)
             structs.append(
                 STRUCT_FMT.format(comment=comment,
                                 database_message_name=message.name,
