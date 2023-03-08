@@ -50,6 +50,7 @@ HEADER_FMT = '''\
 #define {include_guard}
 
 #include <stdio.h>
+#include <cstdlib>
 
 #ifdef __cplusplus
 extern "C" {{
@@ -77,6 +78,27 @@ extern "C" {{
 
 /* Signal choices. */
 {choices_defines}
+
+/* Indexes */
+{message_indexes}
+
+#define {database_name}_MESSAGE_COUNT {msg_count}
+
+typedef struct {{
+    uint16_t id;
+    void* message_raw;
+    void* message_conversion;
+}} devices_t;
+typedef devices_t {database_name}_devices[{database_name}_MESSAGE_COUNT];
+
+
+{database_name}_devices* {database_name}_devices_new();
+void {database_name}_devices_free({database_name}_devices* devices);
+void {database_name}_devices_deserialize_from_id(
+    {database_name}_devices* devices,
+    uint16_t message_id,
+    uint8_t* data
+);
 
 {structs}
 {declarations}
@@ -345,6 +367,35 @@ STRUCT_FMT = '''\
 struct {database_name}_{message_name}_t {{
 {members}
 }};
+'''
+
+MESSAGE_INDEX = '''#define {database_name}_{message_name}_INDEX {index}
+'''
+
+DEVICES_DEFINITIONS = '''{database_name}_devices* {database_name}_devices_new() {{
+    {database_name}_devices* devices = ({database_name}_devices*) malloc(sizeof({database_name}_devices));
+{devices_new_body}    return devices;
+}}'''
+'''
+void {database_name}_devices_free({database_name}_devices* devices) {{
+    {devices_free_body}
+    free(devices);
+}}
+void {database_name}_devices_deserialize_from_id(
+    {database_name}_devices* devices,
+    canlib_message_id message_id,
+    uint8_t* data)
+{{
+    switch(message_id){{
+        {devices_deserialize_body}
+    }}
+}}
+'''
+
+DEVICE_MESSAGE_NEW = '''\
+    (*devices)[{database_name}_{message_name}_INDEX].id = {id};
+    (*devices)[{database_name}_{message_name}_INDEX].message_raw = (void*) malloc(sizeof({database_name}_{message_name}_t));
+    (*devices)[{database_name}_{message_name}_INDEX].message_conversion = NULL;
 '''
 
 DECLARATION_PACK_FMT = '''\
@@ -677,7 +728,9 @@ MESSAGE_FIELD_FILE_FROM_ID = '''    case {id}:
 
 class Signal:
 
-    def __init__(self, signal):
+    def __init__(self, signal, message_name, database_name):
+        self.database_name = database_name
+        self.message_name = message_name
         self._signal = signal
         self.snake_name = camel_to_snake_case(self.name)
 
@@ -717,6 +770,10 @@ class Signal:
                 type_name = 'u' + type_name
 
         return type_name
+
+    @property
+    def enum_name(self):
+        return f'{self.database_name}_{self.message_name}_{self.snake_name}'
 
     @property
     def type_suffix(self):
@@ -886,10 +943,10 @@ class Signal:
 
 class Message:
 
-    def __init__(self, message):
+    def __init__(self, message, database_name):
         self._message = message
         self.snake_name = camel_to_snake_case(self.name)
-        self.signals = [Signal(signal)for signal in message.signals]
+        self.signals = [Signal(signal, self.snake_name, database_name)for signal in message.signals]
 
     def __getattr__(self, name):
         return getattr(self._message, name)
@@ -1179,14 +1236,16 @@ def _format_pack_code(message, helper_kinds):
     return '\n'.join(variable_lines), '\n'.join(body_lines)
 
 
-def _format_unpack_code_mux(message,
+def _format_unpack_code_mux(database_name,
+                            message,
                             mux,
                             body_lines_per_index,
                             variable_lines,
                             helper_kinds,
                             node_name):
     signal_name, multiplexed_signals = list(mux.items())[0]
-    _format_unpack_code_signal(message,
+    _format_unpack_code_signal(database_name,
+                               message,
                                signal_name,
                                body_lines_per_index,
                                variable_lines,
@@ -1199,7 +1258,8 @@ def _format_unpack_code_mux(message,
     ]
 
     for multiplexer_id, multiplexed_signals in multiplexed_signals_per_id:
-        body_lines = _format_unpack_code_level(message,
+        body_lines = _format_unpack_code_level(database_name,
+                                               message,
                                                multiplexed_signals,
                                                variable_lines,
                                                helper_kinds,
@@ -1218,7 +1278,8 @@ def _format_unpack_code_mux(message,
     return [('    ' + line).rstrip() for line in lines]
 
 
-def _format_unpack_code_signal(message,
+def _format_unpack_code_signal(database_name,
+                               message,
                                signal_name,
                                body_lines,
                                variable_lines,
@@ -1234,12 +1295,18 @@ def _format_unpack_code_signal(message,
 
     for i, (index, shift, shift_direction, mask) in enumerate(segments):
         if signal.is_float or signal.is_signed:
-            fmt = '    {} {} unpack_{}_shift_u{}(src_p[{}], {}u, 0x{:02x}u);'
+            fmt = '    {} {} {} unpack_{}_shift_u{}(src_p[{}], {}u, 0x{:02x}u);'
         else:
-            fmt = '    dst_p->{} {} unpack_{}_shift_u{}(src_p[{}], {}u, 0x{:02x}u);'
+            fmt = '    dst_p->{} {} {} unpack_{}_shift_u{}(src_p[{}], {}u, 0x{:02x}u);'
+
+        cast = ''
+
+        if signal.is_enum:
+            cast = f'({database_name}_{message.snake_name}_{signal.snake_name})'
 
         line = fmt.format(signal.snake_name,
                           '=' if i == 0 else '|=',
+                          cast,
                           shift_direction,
                           signal.type_length,
                           index,
@@ -1268,7 +1335,8 @@ def _format_unpack_code_signal(message,
         body_lines.append(conversion)
 
 
-def _format_unpack_code_level(message,
+def _format_unpack_code_level(database_name,
+                              message,
                               signal_names,
                               variable_lines,
                               helper_kinds,
@@ -1282,7 +1350,8 @@ def _format_unpack_code_level(message,
 
     for signal_name in signal_names:
         if isinstance(signal_name, dict):
-            mux_lines = _format_unpack_code_mux(message,
+            mux_lines = _format_unpack_code_mux(database_name,
+                                                message,
                                                 signal_name,
                                                 body_lines,
                                                 variable_lines,
@@ -1297,7 +1366,8 @@ def _format_unpack_code_level(message,
             if not _is_receiver(message.get_signal_by_name(signal_name), node_name):
                 continue
 
-            _format_unpack_code_signal(message,
+            _format_unpack_code_signal(database_name,
+                                       message,
                                        signal_name,
                                        body_lines,
                                        variable_lines,
@@ -1318,9 +1388,10 @@ def _format_unpack_code_level(message,
     return body_lines
 
 
-def _format_unpack_code(message, helper_kinds, node_name):
+def _format_unpack_code(database_name, message, helper_kinds, node_name):
     variable_lines = []
-    body_lines = _format_unpack_code_level(message,
+    body_lines = _format_unpack_code_level(database_name,
+                                           message,
                                            message.signal_tree,
                                            variable_lines,
                                            helper_kinds,
@@ -1598,22 +1669,34 @@ def _get_floating_point_type(use_float):
     return 'float' if use_float else 'double'
 
 def _get_conversion_to_raw_head(database_name, message):
-    message_raw_to_conversion = MESSAGE_DEFINITION_CONVERSION_TO_RAW.format(database_name=database_name,
+    message_conversion_to_raw = MESSAGE_DEFINITION_CONVERSION_TO_RAW.format(database_name=database_name,
                                                                                 message_name=message.snake_name,
                                                                                 struct_type=f"struct {database_name}_{message.snake_name}_t")
     for signal in message.signals:
-        message_raw_to_conversion += SIGNAL_DECLARATION_TO_.format(signal_type='float' if signal.is_float_conversion else signal.type_name,
+        if signal.is_enum:
+            type = signal.enum_name
+        elif signal.is_float_conversion:
+            type = "float"
+        else:
+            type = signal.type_name
+        message_conversion_to_raw += SIGNAL_DECLARATION_TO_.format(signal_type=type,
                                                                     signal_name=signal.snake_name)
-    return message_raw_to_conversion[:-2] + "\n)"
+    return message_conversion_to_raw[:-2] + "\n)"
 
 def _get_raw_to_conversion_head(database_name, message):
-    message_conversion_to_raw = MESSAGE_DEFINITION_RAW_TO_CONVERSION.format(database_name=database_name,
+    message_raw_to_conversion = MESSAGE_DEFINITION_RAW_TO_CONVERSION.format(database_name=database_name,
                                                                             message_name=message.snake_name,
                                                                             struct_type=f"struct {database_name}_{message.snake_name}_converted_t")
     for signal in message.signals:
-        message_conversion_to_raw += SIGNAL_DECLARATION_TO_.format(signal_type=signal.type_name,
+        if signal.is_enum:
+            type = signal.enum_name
+        elif signal.is_float_conversion:
+            type = "float"
+        else:
+            type = signal.type_name
+        message_raw_to_conversion += SIGNAL_DECLARATION_TO_.format(signal_type=type,
                                                                 signal_name=signal.snake_name)
-    return message_conversion_to_raw[:-2] + "\n)"
+    return message_raw_to_conversion[:-2] + "\n)"
 
 def _generate_declarations(database_name, messages, floating_point_numbers, use_float, node_name):
     declarations = []
@@ -1679,8 +1762,8 @@ def _generate_declarations(database_name, messages, floating_point_numbers, use_
 
         declarations.append('int primary_to_string_from_id(uint16_t message_id, void* message, char* buffer);')
         declarations.append('int primary_fields_from_id(uint16_t message_id, char* buffer);')
-        declarations.append('int primary_to_string_file_from_id(uint16_t message_id, void* message, char* buffer);')
-        declarations.append('int primary_fields_file_from_id(uint16_t message_id, char* buffer);')
+        declarations.append('int primary_to_string_file_from_id(uint16_t message_id, void* message, FILE* buffer);')
+        declarations.append('int primary_fields_file_from_id(uint16_t message_id, FILE* buffer);')
 
         if is_sender:
             declaration += DECLARATION_PACK_FMT.format(database_name=database_name,
@@ -1704,6 +1787,7 @@ def _generate_definitions(database_name, messages, floating_point_numbers, use_f
     definitions = []
     pack_helper_kinds = set()
     unpack_helper_kinds = set()
+    devices_new = ''
 
     to_string_from_id = '''int primary_to_string_from_id(uint16_t message_id, void* message, char* buffer) {
     switch (message_id) {
@@ -1711,10 +1795,10 @@ def _generate_definitions(database_name, messages, floating_point_numbers, use_f
     fields_from_id = '''int primary_fields_from_id(uint16_t message_id, char* buffer) {
     switch (message_id) {
     '''
-    to_string_file_from_id = '''int primary_to_string_file_from_id(uint16_t message_id, void* message, char* buffer) {
+    to_string_file_from_id = '''int primary_to_string_file_from_id(uint16_t message_id, void* message, FILE* buffer) {
     switch (message_id) {
     '''
-    fields_file_from_id = '''int primary_fields_file_from_id(uint16_t message_id, char* buffer) {
+    fields_file_from_id = '''int primary_fields_file_from_id(uint16_t message_id, FILE* buffer) {
     switch (message_id) {
     '''
 
@@ -1722,6 +1806,10 @@ def _generate_definitions(database_name, messages, floating_point_numbers, use_f
         signal_definitions = []
         is_sender = _is_sender(message, node_name)
         is_receiver = node_name is None
+
+        devices_new += DEVICE_MESSAGE_NEW.format(database_name=database_name,
+                                                message_name=message.snake_name,
+                                                id=message._message._frame_id)
 
         to_string_from_id += MESSAGE_STRING_FROM_ID.format(id=message._message._frame_id,
                                                             database_name=database_name,
@@ -1840,7 +1928,8 @@ def _generate_definitions(database_name, messages, floating_point_numbers, use_f
         if message.length > 0:
             pack_variables, pack_body = _format_pack_code(message,
                                                           pack_helper_kinds)
-            unpack_variables, unpack_body = _format_unpack_code(message,
+            unpack_variables, unpack_body = _format_unpack_code(database_name,
+                                                                message,
                                                                 unpack_helper_kinds,
                                                                 node_name)
             pack_unused = ''
@@ -1884,6 +1973,9 @@ def _generate_definitions(database_name, messages, floating_point_numbers, use_f
     definitions.append(fields_from_id + "}\n\treturn 0;\n}\n")
     definitions.append(to_string_file_from_id + "}\n\treturn 0;\n}\n")
     definitions.append(fields_file_from_id + "}\n\treturn 0;\n}\n")
+
+    definitions.append(DEVICES_DEFINITIONS.format(database_name=database_name,
+                                                devices_new_body=devices_new))
 
     return '\n'.join(definitions), (pack_helper_kinds, unpack_helper_kinds)
 
@@ -1951,6 +2043,13 @@ def _generate_fuzzer_source(database_name,
 
     return source, makefile
 
+def _generate_indexes(database_name, messages):
+    ret = ''
+    for i, message in enumerate(messages):
+        ret += MESSAGE_INDEX.format(database_name=database_name,
+                                    message_name=message.snake_name,
+                                    index=i)
+    return ret
 
 def generate(database,
              database_name,
@@ -1993,7 +2092,7 @@ def generate(database,
     """
 
     date = time.ctime()
-    messages = [Message(message) for message in database.messages]
+    messages = [Message(message, database_name) for message in database.messages]
     #messages[0]._message._frame_id
     include_guard = f'{database_name.upper()}_H'
     frame_id_defines = _generate_frame_id_defines(database_name, messages, node_name)
@@ -2021,6 +2120,7 @@ def generate(database,
                                                       use_float,
                                                       node_name)
     helpers = _generate_helpers(helper_kinds)
+    message_indexes = _generate_indexes(database_name, messages)
 
     header = HEADER_FMT.format(version=__version__,
                                date=date,
@@ -2030,6 +2130,9 @@ def generate(database,
                                is_extended_frame_defines=is_extended_frame_defines,
                                frame_cycle_time_defines=frame_cycle_time_defines,
                                choices_defines=choices_defines,
+                               message_indexes=message_indexes,
+                               database_name=database_name,
+                               msg_count=len(messages),
                                structs=structs,
                                declarations=declarations)
 
@@ -2048,3 +2151,6 @@ def generate(database,
         fuzzer_source_name)
 
     return header, source, fuzzer_source, fuzzer_makefile
+
+#enum nei messaggi
+#bitset
