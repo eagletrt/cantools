@@ -375,19 +375,20 @@ MESSAGE_INDEX = '''#define {database_name}_{message_name}_INDEX {index}
 DEVICES_DEFINITIONS = '''{database_name}_devices* {database_name}_devices_new() {{
     {database_name}_devices* devices = ({database_name}_devices*) malloc(sizeof({database_name}_devices));
 {devices_new_body}    return devices;
-}}'''
-'''
+}}
+
 void {database_name}_devices_free({database_name}_devices* devices) {{
-    {devices_free_body}
+{devices_free_body}\
     free(devices);
 }}
+
 void {database_name}_devices_deserialize_from_id(
     {database_name}_devices* devices,
-    canlib_message_id message_id,
+    uint16_t message_id,
     uint8_t* data)
 {{
     switch(message_id){{
-        {devices_deserialize_body}
+{devices_deserialize_body}
     }}
 }}
 '''
@@ -396,6 +397,19 @@ DEVICE_MESSAGE_NEW = '''\
     (*devices)[{database_name}_{message_name}_INDEX].id = {id};
     (*devices)[{database_name}_{message_name}_INDEX].message_raw = (void*) malloc(sizeof({database_name}_{message_name}_t));
     (*devices)[{database_name}_{message_name}_INDEX].message_conversion = NULL;
+'''
+DEVICE_MESSAGE_FREE = '''\
+    free((*devices)[{database_name}_{message_name}_INDEX].message_raw);
+'''
+DEVICE_MESSAGE_DESERIALIZE = '''\
+        case {id}: {{
+            {database_name}_{message_name}_unpack(
+                ({database_name}_{message_name}_t*) &(*devices)[{database_name}_{message_name}_INDEX].message_raw,
+                data,
+                sizeof({database_name}_{message_name}_t)
+            );
+            return;
+        }}
 '''
 
 DECLARATION_PACK_FMT = '''\
@@ -1788,6 +1802,8 @@ def _generate_definitions(database_name, messages, floating_point_numbers, use_f
     pack_helper_kinds = set()
     unpack_helper_kinds = set()
     devices_new = ''
+    devices_free = ''
+    devices_deserialize = ''
 
     to_string_from_id = '''int primary_to_string_from_id(uint16_t message_id, void* message, char* buffer) {
     switch (message_id) {
@@ -1810,6 +1826,11 @@ def _generate_definitions(database_name, messages, floating_point_numbers, use_f
         devices_new += DEVICE_MESSAGE_NEW.format(database_name=database_name,
                                                 message_name=message.snake_name,
                                                 id=message._message._frame_id)
+        devices_free += DEVICE_MESSAGE_FREE.format(database_name=database_name,
+                                                message_name=message.snake_name)
+        devices_deserialize += DEVICE_MESSAGE_DESERIALIZE.format(id=message._message._frame_id,
+                                                                message_name=message.snake_name,
+                                                                database_name=database_name)
 
         to_string_from_id += MESSAGE_STRING_FROM_ID.format(id=message._message._frame_id,
                                                             database_name=database_name,
@@ -1975,7 +1996,9 @@ def _generate_definitions(database_name, messages, floating_point_numbers, use_f
     definitions.append(fields_file_from_id + "}\n\treturn 0;\n}\n")
 
     definitions.append(DEVICES_DEFINITIONS.format(database_name=database_name,
-                                                devices_new_body=devices_new))
+                                                devices_new_body=devices_new,
+                                                devices_free_body=devices_free,
+                                                devices_deserialize_body=devices_deserialize))
 
     return '\n'.join(definitions), (pack_helper_kinds, unpack_helper_kinds)
 
