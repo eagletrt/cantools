@@ -316,8 +316,8 @@ static void test_{name}(
     int res2;
     uint8_t packed[size];
     uint8_t packed2[size];
-    struct {name}_t unpacked;
-    struct {name}_t unpacked2;
+    {name}_t unpacked;
+    {name}_t unpacked2;
 
     memset(&unpacked, 0, sizeof(unpacked));
 
@@ -364,9 +364,9 @@ STRUCT_FMT = '''\
 {comment}\
  * All signal values are as on the CAN bus.
  */
-struct {database_name}_{message_name}_t {{
+typedef struct  {{
 {members}
-}};
+}} {database_name}_{message_name}_t;
 '''
 
 MESSAGE_INDEX = '''#define {database_name}_{message_name}_INDEX {index}
@@ -424,7 +424,7 @@ DECLARATION_PACK_FMT = '''\
  */
 int {database_name}_{message_name}_pack(
     uint8_t *dst_p,
-    const struct {database_name}_{message_name}_t *src_p,
+    const {database_name}_{message_name}_t *src_p,
     size_t size);
 
 '''
@@ -440,7 +440,7 @@ DECLARATION_UNPACK_FMT = '''\
  * @return zero(0) or negative error code.
  */
 int {database_name}_{message_name}_unpack(
-    struct {database_name}_{message_name}_t *dst_p,
+    {database_name}_{message_name}_t *dst_p,
     const uint8_t *src_p,
     size_t size);
 '''
@@ -540,7 +540,7 @@ static inline {var_type} unpack_right_shift_u{length}(
 DEFINITION_PACK_FMT = '''\
 int {database_name}_{message_name}_pack(
     uint8_t *dst_p,
-    const struct {database_name}_{message_name}_t *src_p,
+    const {database_name}_{message_name}_t *src_p,
     size_t size)
 {{
 {pack_unused}\
@@ -558,7 +558,7 @@ int {database_name}_{message_name}_pack(
 
 DEFINITION_UNPACK_FMT = '''\
 int {database_name}_{message_name}_unpack(
-    struct {database_name}_{message_name}_t *dst_p,
+    {database_name}_{message_name}_t *dst_p,
     const uint8_t *src_p,
     size_t size)
 {{
@@ -644,7 +644,7 @@ bool {database_name}_{message_name}_{signal_name}_is_in_range({type_name} value)
 EMPTY_DEFINITION_FMT = '''\
 int {database_name}_{message_name}_pack(
     uint8_t *dst_p,
-    const struct {database_name}_{message_name}_t *src_p,
+    const {database_name}_{message_name}_t *src_p,
     size_t size)
 {{
     (void)dst_p;
@@ -655,7 +655,7 @@ int {database_name}_{message_name}_pack(
 }}
 
 int {database_name}_{message_name}_unpack(
-    struct {database_name}_{message_name}_t *dst_p,
+    {database_name}_{message_name}_t *dst_p,
     const uint8_t *src_p,
     size_t size)
 {{
@@ -684,10 +684,10 @@ SIGNAL_MEMBER_FMT = '''\
     {type_name} {name}{length};\
 '''
 
-MESSAGE_DECLARATION_TO_STRING = '''int {database_name}_{message_name}_to_string(struct {database_name}_{message_name}_converted_t *message, char *buffer);
+MESSAGE_DECLARATION_TO_STRING = '''int {database_name}_{message_name}_to_string({database_name}_{message_name}_converted_t *message, char *buffer);
 '''
 
-MESSAGE_DEFINITION_TO_STRING = '''int {database_name}_{message_name}_to_string(struct {database_name}_{message_name}_converted_t *message, char *buffer){{
+MESSAGE_DEFINITION_TO_STRING = '''int {database_name}_{message_name}_to_string({database_name}_{message_name}_converted_t *message, char *buffer){{
     return sprintf(
         buffer,
 '''
@@ -710,10 +710,10 @@ SIGNAL_DEFINITION_FIELDS = '''    "{signal_name}"",",
 
 #FILE
 
-MESSAGE_DECLARATION_TO_STRING_FILE = '''int {database_name}_{message_name}_to_string_file(struct {database_name}_{message_name}_converted_t *message, FILE *buffer);
+MESSAGE_DECLARATION_TO_STRING_FILE = '''int {database_name}_{message_name}_to_string_file({database_name}_{message_name}_converted_t *message, FILE *buffer);
 '''
 
-MESSAGE_DEFINITION_TO_STRING_FILE = '''int {database_name}_{message_name}_to_string_file(struct {database_name}_{message_name}_converted_t *message, FILE *buffer){{
+MESSAGE_DEFINITION_TO_STRING_FILE = '''int {database_name}_{message_name}_to_string_file({database_name}_{message_name}_converted_t *message, FILE *buffer){{
     return fprintf(
         buffer,
 '''
@@ -727,14 +727,14 @@ MESSAGE_DEFINITION_FIELDS_FILE = '''int {database_name}_{message_name}_fields_fi
 '''
 
 MESSAGE_STRING_FROM_ID = '''    case {id}:
-            return {database_name}_{message_name}_to_string((struct {database_name}_{message_name}_converted_t*) message, buffer);
+            return {database_name}_{message_name}_to_string(({database_name}_{message_name}_converted_t*) message, buffer);
     '''
 MESSAGE_FIELD_FROM_ID = '''    case {id}:
             return {database_name}_{message_name}_fields(buffer);
     '''
 
 MESSAGE_FILE_FROM_ID = '''    case {id}:
-            return {database_name}_{message_name}_to_string_file((struct {database_name}_{message_name}_converted_t*) message, buffer);
+            return {database_name}_{message_name}_to_string_file(({database_name}_{message_name}_converted_t*) message, buffer);
     '''
 MESSAGE_FIELD_FILE_FROM_ID = '''    case {id}:
             return {database_name}_{message_name}_fields_file(buffer);
@@ -1685,7 +1685,7 @@ def _get_floating_point_type(use_float):
 def _get_conversion_to_raw_head(database_name, message):
     message_conversion_to_raw = MESSAGE_DEFINITION_CONVERSION_TO_RAW.format(database_name=database_name,
                                                                                 message_name=message.snake_name,
-                                                                                struct_type=f"struct {database_name}_{message.snake_name}_t")
+                                                                                struct_type=f"{database_name}_{message.snake_name}_t")
     for signal in message.signals:
         if signal.is_enum:
             type = signal.enum_name
@@ -1700,7 +1700,7 @@ def _get_conversion_to_raw_head(database_name, message):
 def _get_raw_to_conversion_head(database_name, message):
     message_raw_to_conversion = MESSAGE_DEFINITION_RAW_TO_CONVERSION.format(database_name=database_name,
                                                                             message_name=message.snake_name,
-                                                                            struct_type=f"struct {database_name}_{message.snake_name}_converted_t")
+                                                                            struct_type=f"{database_name}_{message.snake_name}_converted_t")
     for signal in message.signals:
         if signal.is_enum:
             type = signal.enum_name
@@ -1756,13 +1756,13 @@ def _generate_declarations(database_name, messages, floating_point_numbers, use_
 
         declarations.append(MESSAGE_DECLARATION_RAW_TO_CONVERSION_STRUCT.format(database_name=database_name,
                                                                     message_name=message.snake_name,
-                                                                    struct_type_out=f"struct {database_name}_{message.snake_name}_converted_t",
-                                                                    struct_type_in=f"const struct {database_name}_{message.snake_name}_t"))
+                                                                    struct_type_out=f"{database_name}_{message.snake_name}_converted_t",
+                                                                    struct_type_in=f"const {database_name}_{message.snake_name}_t"))
 
         declarations.append(MESSAGE_DECLARATION_CONVERSION_TO_RAW_STRUCT.format(database_name=database_name,
                                                                     message_name=message.snake_name,
-                                                                    struct_type_in=f"struct {database_name}_{message.snake_name}_t",
-                                                                    struct_type_out=f"const struct {database_name}_{message.snake_name}_converted_t"))
+                                                                    struct_type_in=f"{database_name}_{message.snake_name}_t",
+                                                                    struct_type_out=f"const {database_name}_{message.snake_name}_converted_t"))
 
         declarations.append(MESSAGE_DECLARATION_TO_STRING.format(database_name=database_name,
                                                                 message_name=message.snake_name))
@@ -1862,13 +1862,13 @@ def _generate_definitions(database_name, messages, floating_point_numbers, use_f
 
         message_raw_to_conversion_struct = MESSAGE_DEFINITION_RAW_TO_CONVERSION_STRUCT.format(database_name=database_name,
                                                                                 message_name=message.snake_name,
-                                                                                struct_type_out=f"struct {database_name}_{message.snake_name}_converted_t",
-                                                                                struct_type_in=f"const struct {database_name}_{message.snake_name}_t")
+                                                                                struct_type_out=f"{database_name}_{message.snake_name}_converted_t",
+                                                                                struct_type_in=f"const {database_name}_{message.snake_name}_t")
 
         message_conversion_to_raw_struct = MESSAGE_DEFINITION_CONVERSION_TO_RAW_STRUCT.format(database_name=database_name,
                                                                     message_name=message.snake_name,
-                                                                    struct_type_in=f"struct {database_name}_{message.snake_name}_t",
-                                                                    struct_type_out=f"const struct {database_name}_{message.snake_name}_converted_t")
+                                                                    struct_type_in=f"{database_name}_{message.snake_name}_t",
+                                                                    struct_type_out=f"const {database_name}_{message.snake_name}_converted_t")
 
         for signal, (encode, decode), check in zip(message.signals,
                                                    _generate_encode_decode(message, use_float),
@@ -2174,6 +2174,3 @@ def generate(database,
         fuzzer_source_name)
 
     return header, source, fuzzer_source, fuzzer_makefile
-
-#enum nei messaggi
-#bitset

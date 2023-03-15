@@ -68,6 +68,8 @@ target/
 # IntelliJ IDEA
 .idea/
 
+.vscode/
+
 # CANdb++
 /tests/files/*.ini
 
