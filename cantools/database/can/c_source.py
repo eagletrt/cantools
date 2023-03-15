@@ -98,6 +98,9 @@ void {database_name}_devices_deserialize_from_id(
     {database_name}_devices* devices,
     uint16_t message_id,
     uint8_t* data
+#ifdef CANLIB_TIMESTAMP
+    , uint64_t timestamp
+#endif // CANLIB_TIMESTAMP
 );
 
 {structs}
@@ -366,6 +369,10 @@ STRUCT_FMT = '''\
  */
 typedef struct  {{
 {members}
+
+#ifdef CANLIB_TIMESTAMP
+    uint64_t _timestamp;
+#endif // CANLIB_TIMESTAMP
 }} {database_name}_{message_name}_t;
 '''
 
@@ -385,7 +392,11 @@ void {database_name}_devices_free({database_name}_devices* devices) {{
 void {database_name}_devices_deserialize_from_id(
     {database_name}_devices* devices,
     uint16_t message_id,
-    uint8_t* data)
+    uint8_t* data
+    #ifdef CANLIB_TIMESTAMP
+    , uint64_t timestamp
+    #endif // CANLIB_TIMESTAMP
+)
 {{
     switch(message_id){{
 {devices_deserialize_body}
@@ -407,6 +418,9 @@ DEVICE_MESSAGE_DESERIALIZE = '''\
                 ({database_name}_{message_name}_t*) &(*devices)[{database_name}_{message_name}_INDEX].message_raw,
                 data,
                 sizeof({database_name}_{message_name}_t)
+                #ifdef CANLIB_TIMESTAMP
+                , timestamp
+                #endif
             );
             return;
         }}
@@ -442,7 +456,11 @@ DECLARATION_UNPACK_FMT = '''\
 int {database_name}_{message_name}_unpack(
     {database_name}_{message_name}_t *dst_p,
     const uint8_t *src_p,
-    size_t size);
+    size_t size
+    #ifdef CANLIB_TIMESTAMP
+        , uint64_t _timestamp
+    #endif // CANLIB_TIMESTAMP
+    );
 '''
 
 SIGNAL_DECLARATION_ENCODE_FMT = '''\
@@ -560,13 +578,20 @@ DEFINITION_UNPACK_FMT = '''\
 int {database_name}_{message_name}_unpack(
     {database_name}_{message_name}_t *dst_p,
     const uint8_t *src_p,
-    size_t size)
+    size_t size
+    #ifdef CANLIB_TIMESTAMP
+        , uint64_t _timestamp
+    #endif // CANLIB_TIMESTAMP
+    )
 {{
 {unpack_unused}\
 {unpack_variables}\
     if (size < {message_length}u) {{
         return (-EINVAL);
     }}
+#ifdef CANLIB_TIMESTAMP
+    dst_p->_timestamp = _timestamp;
+#endif // CANLIB_TIMESTAMP
 {unpack_body}
     return (0);
 }}
@@ -577,16 +602,27 @@ void {database_name}_{message_name}_raw_to_conversion_struct(
     {struct_type_out} *conversion, 
     {struct_type_in} *raw)
 {{
+#ifdef CANLIB_TIMESTAMP
+    conversion->_timestamp = raw->_timestamp;
+#endif // CANLIB_TIMESTAMP
 '''
 
 MESSAGE_DEFINITION_CONVERSION_TO_RAW= '''
 void {database_name}_{message_name}_conversion_to_raw(
     {struct_type} *raw,
+{signals}
+    #ifdef CANLIB_TIMESTAMP
+        , uint64_t _timestamp
+    #endif // CANLIB_TIMESTAMP
 '''
 
 MESSAGE_DEFINITION_RAW_TO_CONVERSION= '''
 void {database_name}_{message_name}_raw_to_conversion(
     {struct_type} *conversion,
+{signals}
+    #ifdef CANLIB_TIMESTAMP
+        , uint64_t _timestamp
+    #endif // CANLIB_TIMESTAMP
 '''
 
 MESSAGE_DEFINITION_CONVERSION_TO_RAW_STRUCT = '''
@@ -594,6 +630,9 @@ void {database_name}_{message_name}_conversion_to_raw_struct(
     {struct_type_in} *raw,
     {struct_type_out} *conversion)
 {{
+#ifdef CANLIB_TIMESTAMP
+    raw->_timestamp = conversion->_timestamp;
+#endif // CANLIB_TIMESTAMP
 '''
 
 SIGNAL_DECLARATION_TO_ = '''    {signal_type} {signal_name},
@@ -690,6 +729,9 @@ MESSAGE_DECLARATION_TO_STRING = '''int {database_name}_{message_name}_to_string(
 MESSAGE_DEFINITION_TO_STRING = '''int {database_name}_{message_name}_to_string({database_name}_{message_name}_converted_t *message, char *buffer){{
     return sprintf(
         buffer,
+        #ifdef CANLIB_TIMESTAMP
+        "%u"","
+        #endif // CANLIB_TIMESTAMP
 '''
 
 SIGNAL_DEFINITION_SPECIFIER = '''    "{specifier}"","
@@ -703,6 +745,9 @@ MESSAGE_DECLARATION_FIELDS = '''int {database_name}_{message_name}_fields(char *
 MESSAGE_DEFINITION_FIELDS = '''int {database_name}_{message_name}_fields(char *buffer){{
     return sprintf(
         buffer,
+        #ifdef CANLIB_TIMESTAMP
+            "_timestamp" ","
+        #endif // CANLIB_TIMESTAMP
 '''
 
 SIGNAL_DEFINITION_FIELDS = '''    "{signal_name}"",",
@@ -716,6 +761,9 @@ MESSAGE_DECLARATION_TO_STRING_FILE = '''int {database_name}_{message_name}_to_st
 MESSAGE_DEFINITION_TO_STRING_FILE = '''int {database_name}_{message_name}_to_string_file({database_name}_{message_name}_converted_t *message, FILE *buffer){{
     return fprintf(
         buffer,
+        #ifdef CANLIB_TIMESTAMP
+        "%u"","
+        #endif // CANLIB_TIMESTAMP
 '''
 
 MESSAGE_DECLARATION_FIELDS_FILE = '''int {database_name}_{message_name}_fields_file(FILE *buffer);
@@ -724,10 +772,14 @@ MESSAGE_DECLARATION_FIELDS_FILE = '''int {database_name}_{message_name}_fields_f
 MESSAGE_DEFINITION_FIELDS_FILE = '''int {database_name}_{message_name}_fields_file(FILE *buffer){{
     return fprintf(
         buffer,
+        #ifdef CANLIB_TIMESTAMP
+            "_timestamp" ","
+        #endif // CANLIB_TIMESTAMP
 '''
 
 MESSAGE_STRING_FROM_ID = '''    case {id}:
-            return {database_name}_{message_name}_to_string(({database_name}_{message_name}_converted_t*) message, buffer);
+            return {database_name}_{message_name}_to_string(({database_name}_{message_name}_converted_t*) message,
+                                                buffer);
     '''
 MESSAGE_FIELD_FROM_ID = '''    case {id}:
             return {database_name}_{message_name}_fields(buffer);
@@ -1683,9 +1735,7 @@ def _get_floating_point_type(use_float):
     return 'float' if use_float else 'double'
 
 def _get_conversion_to_raw_head(database_name, message):
-    message_conversion_to_raw = MESSAGE_DEFINITION_CONVERSION_TO_RAW.format(database_name=database_name,
-                                                                                message_name=message.snake_name,
-                                                                                struct_type=f"{database_name}_{message.snake_name}_t")
+    signals = []
     for signal in message.signals:
         if signal.is_enum:
             type = signal.enum_name
@@ -1693,14 +1743,17 @@ def _get_conversion_to_raw_head(database_name, message):
             type = "float"
         else:
             type = signal.type_name
-        message_conversion_to_raw += SIGNAL_DECLARATION_TO_.format(signal_type=type,
-                                                                    signal_name=signal.snake_name)
+        signals.append(SIGNAL_DECLARATION_TO_.format(signal_type=type,
+                                                    signal_name=signal.snake_name))
+    signals[-1] = signals[-1][:-2]
+    message_conversion_to_raw = MESSAGE_DEFINITION_CONVERSION_TO_RAW.format(database_name=database_name,
+                                                                            message_name=message.snake_name,
+                                                                            struct_type=f"{database_name}_{message.snake_name}_t",
+                                                                            signals = ''.join(signals))
     return message_conversion_to_raw[:-2] + "\n)"
 
 def _get_raw_to_conversion_head(database_name, message):
-    message_raw_to_conversion = MESSAGE_DEFINITION_RAW_TO_CONVERSION.format(database_name=database_name,
-                                                                            message_name=message.snake_name,
-                                                                            struct_type=f"{database_name}_{message.snake_name}_converted_t")
+    signals = []
     for signal in message.signals:
         if signal.is_enum:
             type = signal.enum_name
@@ -1708,8 +1761,13 @@ def _get_raw_to_conversion_head(database_name, message):
             type = "float"
         else:
             type = signal.type_name
-        message_raw_to_conversion += SIGNAL_DECLARATION_TO_.format(signal_type=type,
-                                                                signal_name=signal.snake_name)
+        signals.append(SIGNAL_DECLARATION_TO_.format(signal_type=type,
+                                                    signal_name=signal.snake_name))
+    signals[-1] = signals[-1][:-2]
+    message_raw_to_conversion = MESSAGE_DEFINITION_RAW_TO_CONVERSION.format(database_name=database_name,
+                                                                            message_name=message.snake_name,
+                                                                            struct_type=f"{database_name}_{message.snake_name}_converted_t",
+                                                                            signals = "".join(signals))
     return message_raw_to_conversion[:-2] + "\n)"
 
 def _generate_declarations(database_name, messages, floating_point_numbers, use_float, node_name):
@@ -1774,10 +1832,6 @@ def _generate_declarations(database_name, messages, floating_point_numbers, use_
         declarations.append(MESSAGE_DECLARATION_FIELDS_FILE.format(database_name=database_name,
                                                         message_name=message.snake_name))
 
-        declarations.append('int primary_to_string_from_id(uint16_t message_id, void* message, char* buffer);')
-        declarations.append('int primary_fields_from_id(uint16_t message_id, char* buffer);')
-        declarations.append('int primary_to_string_file_from_id(uint16_t message_id, void* message, FILE* buffer);')
-        declarations.append('int primary_fields_file_from_id(uint16_t message_id, FILE* buffer);')
 
         if is_sender:
             declaration += DECLARATION_PACK_FMT.format(database_name=database_name,
@@ -1794,6 +1848,11 @@ def _generate_declarations(database_name, messages, floating_point_numbers, use_
         if declaration:
             declarations.append(declaration)
 
+    declarations.append(f'int {database_name}_to_string_from_id(uint16_t message_id, void* message, char* buffer);')
+    declarations.append(f'int {database_name}_fields_from_id(uint16_t message_id, char* buffer);')
+    declarations.append(f'int {database_name}_to_string_file_from_id(uint16_t message_id, void* message, FILE* buffer);')
+    declarations.append(f'int {database_name}_fields_file_from_id(uint16_t message_id, FILE* buffer);')
+
     return '\n'.join(declarations)
 
 
@@ -1805,18 +1864,24 @@ def _generate_definitions(database_name, messages, floating_point_numbers, use_f
     devices_free = ''
     devices_deserialize = ''
 
-    to_string_from_id = '''int primary_to_string_from_id(uint16_t message_id, void* message, char* buffer) {
-    switch (message_id) {
-    '''
-    fields_from_id = '''int primary_fields_from_id(uint16_t message_id, char* buffer) {
-    switch (message_id) {
-    '''
-    to_string_file_from_id = '''int primary_to_string_file_from_id(uint16_t message_id, void* message, FILE* buffer) {
-    switch (message_id) {
-    '''
-    fields_file_from_id = '''int primary_fields_file_from_id(uint16_t message_id, FILE* buffer) {
-    switch (message_id) {
-    '''
+    to_string_from_id = '''int {database_name}_to_string_from_id(uint16_t message_id,
+                                void* message,
+                                char* buffer
+) {{
+    switch (message_id) {{
+    '''.format(database_name=database_name)
+
+    fields_from_id = '''int {database_name}_fields_from_id(uint16_t message_id, char* buffer) {{
+    switch (message_id) {{
+    '''.format(database_name=database_name)
+
+    to_string_file_from_id = '''int {database_name}_to_string_file_from_id(uint16_t message_id, void* message, FILE* buffer) {{
+    switch (message_id) {{
+    '''.format(database_name=database_name)
+
+    fields_file_from_id = '''int {database_name}_fields_file_from_id(uint16_t message_id, FILE* buffer) {{
+    switch (message_id) {{
+    '''.format(database_name=database_name)
 
     for message in messages:
         signal_definitions = []
@@ -1850,15 +1915,27 @@ def _generate_definitions(database_name, messages, floating_point_numbers, use_f
         message_to_string_file = MESSAGE_DEFINITION_TO_STRING_FILE.format(database_name=database_name,
                                                                 message_name=message.snake_name)
         signals_specifiers = ""
-        signals_to_string = ""
+        signals_to_string = '''
+#ifdef CANLIB_TIMESTAMP
+    message->_timestamp,
+#endif // CANLIB_TIMESTAMP
+'''
         message_fields_string = MESSAGE_DEFINITION_FIELDS.format(database_name=database_name,
                                                         message_name=message.snake_name)
         message_fields_file = MESSAGE_DEFINITION_FIELDS_FILE.format(database_name=database_name,
                                                         message_name=message.snake_name)
         message_fields = ""
 
-        message_raw_to_conversion = _get_raw_to_conversion_head(database_name, message) + "{\n"
-        message_conversion_to_raw = _get_conversion_to_raw_head(database_name, message) + "{\n"
+        message_raw_to_conversion = _get_raw_to_conversion_head(database_name, message) + '''{
+#ifdef CANLIB_TIMESTAMP
+    conversion->_timestamp = _timestamp;
+#endif // CANLIB_TIMESTAMP
+'''
+        message_conversion_to_raw = _get_conversion_to_raw_head(database_name, message) +  '''{
+#ifdef CANLIB_TIMESTAMP
+    raw->_timestamp = _timestamp;
+#endif // CANLIB_TIMESTAMP
+'''
 
         message_raw_to_conversion_struct = MESSAGE_DEFINITION_RAW_TO_CONVERSION_STRUCT.format(database_name=database_name,
                                                                                 message_name=message.snake_name,
