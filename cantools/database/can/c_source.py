@@ -103,6 +103,9 @@ void {database_name}_devices_deserialize_from_id(
 #endif // CANLIB_TIMESTAMP
 );
 
+static inline int {database_name}_index_from_id(uint16_t id);
+static inline int {database_name}_id_from_index(int index);
+
 {structs}
 {declarations}
 
@@ -791,6 +794,21 @@ MESSAGE_FILE_FROM_ID = '''    case {id}:
 MESSAGE_FIELD_FILE_FROM_ID = '''    case {id}:
             return {database_name}_{message_name}_fields_file(buffer);
     '''
+
+ID_FROM_INDEX = '''static inline int {database_name}_id_from_index(int index){{
+    switch (index) {{
+{body}\
+    }}
+    return -1;
+}}
+'''
+INDEX_FROM_ID = '''static inline int {database_name}_index_from_id(uint16_t id) {{
+    switch (id) {{
+{body}\
+    }}
+    return -1;
+}}
+'''
 
 class Signal:
 
@@ -1864,6 +1882,9 @@ def _generate_definitions(database_name, messages, floating_point_numbers, use_f
     devices_free = ''
     devices_deserialize = ''
 
+    index_from_id = ''
+    id_from_index = ''
+
     to_string_from_id = '''int {database_name}_to_string_from_id(uint16_t message_id,
                                 void* message,
                                 char* buffer
@@ -1887,6 +1908,11 @@ def _generate_definitions(database_name, messages, floating_point_numbers, use_f
         signal_definitions = []
         is_sender = _is_sender(message, node_name)
         is_receiver = node_name is None
+
+        index_from_id += '\t\tcase {}: return {};\n'.format(message._message._frame_id,
+                                                    f'{database_name}_{message.snake_name}_INDEX')
+        id_from_index += '\t\tcase {}: return {};\n'.format(f'{database_name}_{message.snake_name}_INDEX',
+                                                    message._message._frame_id)
 
         devices_new += DEVICE_MESSAGE_NEW.format(database_name=database_name,
                                                 message_name=message.snake_name,
@@ -2067,6 +2093,8 @@ def _generate_definitions(database_name, messages, floating_point_numbers, use_f
         if definition:
             definitions.append(definition)
     
+    definitions.append(INDEX_FROM_ID.format(database_name=database_name, body=index_from_id))
+    definitions.append(ID_FROM_INDEX.format(database_name=database_name, body=id_from_index))
     definitions.append(to_string_from_id + "}\n\treturn 0;\n}\n")
     definitions.append(fields_from_id + "}\n\treturn 0;\n}\n")
     definitions.append(to_string_file_from_id + "}\n\treturn 0;\n}\n")
