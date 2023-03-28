@@ -11,6 +11,7 @@ from typing import (
 from .bus import Bus
 from .formats import arxml
 from .formats import dbc
+from .formats import json
 from .formats import kcd
 from .formats import sym
 from .formats.arxml import AutosarDatabaseSpecifics
@@ -224,6 +225,14 @@ class Database:
         self._buses = database.buses
         self._version = database.version
         self._dbc = database.dbc
+        self.refresh()
+
+    def add_json_string(self, string: str) -> None:
+        database = json.load_string(string, self._strict, sort_signals=self._sort_signals)
+
+        self._messages += database.messages
+        self._nodes = database.nodes
+        #self._buses = database.buses
         self.refresh()
 
     def add_kcd(self, fp: TextIO) -> None:

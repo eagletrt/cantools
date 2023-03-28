@@ -1,0 +1,1253 @@
+{
+  "version": 1.3,
+  "types": {
+    "HvErrors": {
+      "type": "bitset",
+      "items": [
+        "CELL_LOW_VOLTAGE",
+        "CELL_UNDER_VOLTAGE",
+        "CELL_OVER_VOLTAGE",
+        "CELL_HIGH_TEMPERATURE",
+        "CELL_OVER_TEMPERATURE",
+        "OVER_CURRENT",
+        "CAN",
+        "INT_VOLTAGE_MISMATCH",
+        "CELLBOARD_COMM",
+        "CELLBOARD_INTERNAL",
+        "FEEDBACK",
+        "FEEDBACK_CIRCUITRY",
+        "EEPROM_COMM",
+        "EEPROM_WRITE"
+      ]
+    },
+    "LvErrors": {
+      "type": "bitset",
+      "items": [
+        "CELL_UNDERVOLTAGE",
+        "CELL_OVERVOLTAGE",
+        "OPEN_WIRE",
+        "CAN",
+        "SPI",
+        "OVER_CURRENT",
+        "DCDC12_UNDER_TEMPERATURE",
+        "DCDC12_OVER_TEMPERATURE",
+        "DCDC24_UNDER_TEMPERATURE",
+        "DCDC24_OVER_TEMPERATURE",
+        "CELL_UNDER_TEMPERATURE",
+        "CELL_OVER_TEMPERATURE",
+        "RELAY",
+        "LTC6810",
+        "VOLTAGES_NOT_READY",
+        "MCP23017",
+        "RADIATOR",
+        "FAN",
+        "PUMP",
+        "ADC_INIT",
+        "DCDC12",
+        "DCDC24"
+      ]
+    },
+    "DasErrors": {
+      "type": "bitset",
+      "items": [
+        "PEDAL_ADC",
+        "PEDAL_IMPLAUSIBILITY",
+        "IMU_TOUT",
+        "IRTS_TOUT",
+        "TS_TOUT",
+        "INVL_TOUT",
+        "INVR_TOUT",
+        "STEER_TOUT",
+        "FSM"
+      ]
+    },
+    "InvStatus": {
+      "type": "bitset",
+      "items": [
+        "DRIVE_ENABLE",
+        "NCR0",
+        "LIMP",
+        "LIMM",
+        "DRIVE_OK",
+        "ICNS",
+        "T_NLIM",
+        "P_N",
+        "N_I",
+        "N0",
+        "RSW",
+        "CAL0",
+        "CAL",
+        "TOL",
+        "DRIVE_READY",
+        "BRK",
+        "SIGN_MAG",
+        "NCLIP",
+        "NCLIPP",
+        "NCLIPM",
+        "IRD_DIG",
+        "IUSE_RCHD",
+        "IRD_N",
+        "IRD_TI",
+        "IRD_TIR",
+        "HZ10",
+        "IRD_TM",
+        "IRD_ANA",
+        "IWCNS",
+        "RFE_PULSE",
+        "MD",
+        "HND_WHL"
+      ]
+    },
+    "InvErrors": {
+      "type": "bitset",
+      "items": [
+        "BAD_PARAM",
+        "HW_FAULT",
+        "SAFETY_FAULT",
+        "CAN_TIMEOUT",
+        "ENCODER_ERR",
+        "NO_POWER_VOLTAGE",
+        "HI_MOTOR_TEMP",
+        "HI_DEVICE_TEMP",
+        "OVERVOLTAGE",
+        "OVERCURRENT",
+        "RACEAWAY",
+        "USER_ERR",
+        "UNKNOWN_ERR_12",
+        "UNKNOWN_ERR_13",
+        "CURRENT_ERR",
+        "BALLAST_OVERLOAD",
+        "DEVICE_ID_ERR",
+        "RUN_SIG_FAULT",
+        "UNKNOWN_ERR_19",
+        "UNKNOWN_ERR_20",
+        "POWERVOLTAGE_WARN",
+        "HI_MOTOR_TEMP_WARN",
+        "HI_DEVICE_TEMP_WARN",
+        "VOUT_LIMIT_WARN",
+        "OVERCURRENT_WARN",
+        "RACEAWAY_WARN",
+        "UNKNOWN_ERR_27",
+        "UNKNOWN_ERR_28",
+        "UNKNOWN_ERR_29",
+        "UNKNOWN_ERR_30",
+        "BALLAST_OVERLOAD_WARN"
+      ]
+    },
+    "Inv_IOInfo": {
+      "type": "bitset",
+      "items": [
+        "LMT1",
+        "LMT2",
+        "IN2",
+        "IN1",
+        "FRG",
+        "RFE",
+        "UNK6",
+        "UNK7",
+        "OUT1",
+        "OUT2",
+        "BTB",
+        "GO",
+        "OUT3",
+        "OUT4",
+        "G_OFF",
+        "BRK1"
+      ]
+    },
+    "RaceType": {
+      "type": "enum",
+      "items": ["ACCELERATION", "SKIDPAD", "AUTOCROSS", "ENDURANCE"]
+    },
+    "InverterStatus": {
+      "type": "enum",
+      "items": ["OFF", "IDLE", "ON"]
+    },
+    "CarStatus": {
+      "type": "enum",
+      "items": ["IDLE", "PRE_SETUP", "TS_ON", "POST_SETUP", "DRIVE", "TEARDOWN"]
+    },
+    "Toggle": {
+      "type": "enum",
+      "items": ["OFF", "ON"]
+    },
+    "TsStatus": {
+      "type": "enum",
+      "items": ["OFF", "PRECHARGE", "ON", "FATAL"]
+    },
+    "SetCarStatus": {
+      "type": "enum",
+      "items": ["IDLE", "READY", "DRIVE"]
+    },
+    "Bound": {
+      "type": "enum",
+      "items": ["SET_MAX", "SET_MIN"]
+    },
+    "Pedal": {
+      "type": "enum",
+      "items": ["ACCELERATOR", "BRAKE"]
+    },
+    "ImdStatus": {
+      "type": "enum",
+      "items": [
+        "IMD_SC",
+        "IMD_NORMAL",
+        "IMD_UNDER_VOLTAGE",
+        "IMD_START_MEASURE",
+        "IMD_DEVICE_ERROR",
+        "IMD_EARTH_FAULT"
+      ]
+    },
+    "HvFeedbacks": {
+      "type": "bitset",
+      "items": [
+        "FEEDBACK_TSAL_GREEN_FAULT",
+        "FEEDBACK_IMD_LATCHED",
+        "FEEDBACK_TSAL_GREEN_FAULT_LATCHED",
+        "FEEDBACK_BMS_LATCHED",
+        "FEEDBACK_EXT_LATCHED",
+        "FEEDBACK_TSAL_GREEN",
+        "FEEDBACK_TS_OVER_60V_STATUS",
+        "FEEDBACK_AIRN_STATUS",
+        "FEEDBACK_AIRP_STATUS",
+        "FEEDBACK_AIRP_GATE",
+        "FEEDBACK_AIRN_GATE",
+        "FEEDBACK_PRECHARGE_STATUS",
+        "FEEDBACK_TSP_OVER_60V_STATUS",
+        "FEEDBACK_CHECK_MUX",
+        "FEEDBACK_SD_IN",
+        "FEEDBACK_SD_OUT",
+        "FEEDBACK_RELAY_SD",
+        "FEEDBACK_IMD_FAULT",
+        "FEEDBACK_SD_END"
+      ]
+    }
+  },
+  "messages": [
+    {
+      "name": "BMS_HV_JMP_TO_BLT",
+      "topic": "FLASH",
+      "priority": 7,
+      "sending": ["HANDCART"],
+      "receiving": ["BMS_HV"],
+      "contents": {}
+    },
+    {
+      "name": "BMS_LV_JMP_TO_BLT",
+      "topic": "FLASH",
+      "priority": 7,
+      "sending": ["HANDCART"],
+      "receiving": ["BMS_LV"],
+      "contents": {}
+    },
+    {
+      "name": "STEER_VERSION",
+      "topic": "BROADCAST",
+      "priority": 3,
+      "sending": ["STEER"],
+      "receiving": ["DAS", "STEER"],
+      "description": "periodic message containing current can definitions version",
+      "interval": 1000,
+      "contents": {
+        "component_version": "uint8",
+        "canlib_build_time": "uint32"
+      }
+    },
+    {
+      "name": "DAS_VERSION",
+      "topic": "BROADCAST",
+      "priority": 3,
+      "sending": ["DAS"],
+      "receiving": ["DAS", "STEER"],
+      "description": "periodic message containing current can definitions version",
+      "interval": 1000,
+      "contents": {
+        "component_version": "uint8",
+        "canlib_build_time": "uint32"
+      }
+    },
+    {
+      "name": "HV_VERSION",
+      "topic": "BROADCAST",
+      "priority": 3,
+      "sending": ["BMS_HW"],
+      "receiving": ["DAS", "STEER"],
+      "description": "periodic message containing current can definitions version",
+      "interval": 1000,
+      "contents": {
+        "component_version": "uint8",
+        "canlib_build_time": "uint32"
+      }
+    },
+    {
+      "name": "LV_VERSION",
+      "topic": "BROADCAST",
+      "priority": 3,
+      "sending": ["BMS_LW"],
+      "receiving": ["DAS", "STEER"],
+      "description": "periodic message containing current can definitions version",
+      "interval": 1000,
+      "contents": {
+        "component_version": "uint8",
+        "canlib_build_time": "uint32"
+      }
+    },
+    {
+      "name": "TLM_VERSION",
+      "topic": "BROADCAST",
+      "priority": 3,
+      "sending": ["TLM"],
+      "receiving": ["DAS", "STEER"],
+      "description": "periodic message containing current can definitions version",
+      "interval": 1000,
+      "contents": {
+        "component_version": "uint8",
+        "canlib_build_time": "uint32"
+      }
+    },
+    {
+      "name": "TIMESTAMP",
+      "topic": "BROADCAST",
+      "priority": 6,
+      "sending": ["TLM"],
+      "receiving": ["STEER", "DAS", "BMS_HV", "BMS_LV"],
+      "description": "every second unix encoded time and date used by logging devices to sync",
+      "interval": 1000,
+      "contents": {
+        "timestamp": "uint32"
+      }
+    },
+    {
+      "name": "AMBIENT_TEMPERATURE",
+      "topic": "BROADCAST",
+      "priority": 6,
+      "sending": ["DAS"],
+      "receiving": ["STEER", "TLM", "BMS_HV", "BMS_LV"],
+      "description": "ambient temperature as send from IMU",
+      "interval": 1000,
+      "contents": {
+        "temp": "int16"
+      }
+    },
+    {
+      "name": "DATA_LOGGER",
+      "fixed_id": 1072,
+      "sending": ["DATA_LOGGER"],
+      "receiving": ["STEER", "DAS", "TLM", "BMS_HV", "BMS_LV"],
+      "description": "data logger message",
+      "interval": 1000,
+      "contents": {
+        "placeholder1": "uint32",
+        "placeholder2": "uint32"
+      }
+    },
+    {
+      "name": "SET_TLM_STATUS",
+      "topic": "TLM",
+      "priority": 6,
+      "sending": ["STEER"],
+      "receiving": ["TLM"],
+      "description": "Ask telemetry to turn on/off and send a tuple containing the current{test, driver, map); only once",
+      "contents": {
+        "tlm_status": "Toggle"
+      }
+    },
+    {
+      "name": "TLM_STATUS",
+      "topic": "STEER",
+      "priority": 6,
+      "sending": ["TLM"],
+      "receiving": ["STEER"],
+      "description": "The answer to the steering wheel's message that changes the status of the telemetry",
+      "interval": 1000,
+      "contents": {
+        "tlm_status": "Toggle"
+      }
+    },
+    {
+      "name": "STEER_SYSTEM_STATUS",
+      "topic": "TLM",
+      "priority": 0,
+      "sending": ["STEER"],
+      "receiving": ["TLM"],
+      "description": "System stats of the raspberry pi inside the steering wheel",
+      "interval": 1000,
+      "contents": {
+        "soc_temp": "uint8"
+      }
+    },
+    {
+      "name": "HV_VOLTAGE",
+      "topic": "DASnSTEERnCART",
+      "priority": 4,
+      "sending": ["BMS_HV"],
+      "receiving": ["DAS", "STEER", "HANDCART"],
+      "description": "Pack stats",
+      "interval": 10,
+      "contents": {
+        "pack_voltage": {
+          "type": "float32",
+          "range": [0, 460],
+          "force": "uint16"
+        },
+        "bus_voltage": {
+          "type": "float32",
+          "range": [0, 460],
+          "force": "uint16"
+        },
+        "max_cell_voltage": {
+          "type": "float32",
+          "range": [0, 5],
+          "precision": 0.0001
+        },
+        "min_cell_voltage": {
+          "type": "float32",
+          "range": [0, 5],
+          "precision": 0.0001
+        }
+      }
+    },
+    {
+      "name": "HV_CURRENT",
+      "topic": "DASnSTEERnCART",
+      "priority": 4,
+      "sending": ["BMS_HV"],
+      "receiving": ["DAS", "STEER", "HANDCART"],
+      "description": "Current and power supplied by the pack, energy and state of charge of the pack",
+      "interval": 10,
+      "contents": {
+        "current": {
+          "type": "float32",
+          "range": [-10, 200],
+          "force": "uint16"
+        },
+        "power": {
+          "type": "float32",
+          "range": [0, 100],
+          "force": "uint16"
+        },
+        "energy": {
+          "type": "float32",
+          "range": [0, 7000],
+          "force": "uint16"
+        },
+        "soc": {
+          "type": "float32",
+          "range": [0, 100],
+          "force": "uint8"
+        }
+      }
+    },
+    {
+      "name": "HV_TEMP",
+      "topic": "DASnSTEERnCART",
+      "priority": 4,
+      "sending": ["BMS_HV"],
+      "receiving": ["DAS", "STEER", "HANDCART"],
+      "description": "Cell temperatures",
+      "interval": 100,
+      "contents": {
+        "average_temp": {
+          "type": "float32",
+          "range": [-20, 80],
+          "force": "uint8"
+        },
+        "max_temp": {
+          "type": "float32",
+          "range": [-20, 80],
+          "force": "uint8"
+        },
+        "min_temp": {
+          "type": "float32",
+          "range": [-20, 80],
+          "force": "uint8"
+        }
+      }
+    },
+    {
+      "name": "HV_ERRORS",
+      "topic": "DASnSTEERnCART",
+      "priority": 7,
+      "sending": ["BMS_HV"],
+      "receiving": ["DAS", "STEER", "HANDCART"],
+      "description": "Battery-related errors",
+      "interval": 10,
+      "contents": {
+        "warnings": "HvErrors",
+        "errors": "HvErrors"
+      }
+    },
+    {
+      "name": "HV_CAN_FORWARD",
+      "topic": "BMS_HV",
+      "priority": 7,
+      "sending": ["HANDCART"],
+      "receiving": ["BMS_HV"],
+      "description": "Enable/disable can forwarding to internal bms network",
+      "contents": {
+        "can_forward_set": "Toggle"
+      }
+    },
+    {
+      "name": "HV_FANS_OVERRIDE",
+      "topic": "BMS_HV",
+      "priority": 7,
+      "sending": ["HANDCART"],
+      "receiving": ["BMS_HV"],
+      "description": "override fans speed",
+      "contents": {
+        "fans_override": "Toggle",
+        "fans_speed": {
+          "type": "float32",
+          "range": [0, 1],
+          "force": "uint16"
+        }
+      }
+    },
+    {
+      "name": "HV_CAN_FORWARD_STATUS",
+      "topic": "HANDCART",
+      "priority": 7,
+      "sending": ["BMS_HV"],
+      "receiving": ["HANDCART"],
+      "description": "Status of can forwarding to internal bms network",
+      "contents": {
+        "can_forward_status": "Toggle"
+      }
+    },
+    {
+      "name": "HV_FANS_OVERRIDE_STATUS",
+      "topic": "HANDCART",
+      "priority": 4,
+      "sending": ["BMS_HV"],
+      "receiving": ["HANDCART"],
+      "description": "Status of fans override",
+      "contents": {
+        "fans_override": "Toggle",
+        "fans_speed": {
+          "type": "float32",
+          "range": [0, 1],
+          "force": "uint16"
+        }
+      }
+    },
+    {
+      "name": "HV_FEEDBACKS_STATUS",
+      "topic": "DASnSTEER",
+      "priority": 4,
+      "sending": ["BMS_HV"],
+      "receiving": ["DAS", "STEER"],
+      "description": "Errors on the feedbacks checks",
+      "contents": {
+        "feedbacks_status": "HvFeedbacks",
+        "is_circuitry_error": "HvFeedbacks"
+      }
+    },
+    {
+      "name": "HV_IMD_STATUS",
+      "topic": "DASnSTEER",
+      "priority": 4,
+      "sending": ["BMS_HV"],
+      "receiving": ["DAS", "STEER"],
+      "description": "Status of fans override",
+      "contents": {
+        "imd_fault": "bool",
+        "imd_status": "ImdStatus",
+        "imd_info": "int32"
+      }
+    },
+    {
+      "name": "TS_STATUS",
+      "topic": "DASnSTEERnCART",
+      "priority": 7,
+      "sending": ["BMS_HV"],
+      "receiving": ["DAS", "STEER", "HANDCART"],
+      "description": "BMS status",
+      "interval": 10,
+      "contents": {
+        "ts_status": "TsStatus"
+      }
+    },
+    {
+      "name": "SET_TS_STATUS",
+      "topic": "BMS_HV",
+      "priority": 7,
+      "sending": ["DAS", "HANDCART"],
+      "receiving": ["BMS_HV"],
+      "description": "Requests a TS status; only once",
+      "interval": 100,
+      "contents": {
+        "ts_status_set": "Toggle"
+      }
+    },
+    {
+      "name": "STEER_STATUS",
+      "topic": "DAS",
+      "priority": 6,
+      "sending": ["STEER"],
+      "receiving": ["DAS"],
+      "description": "Send update of the tuneable values from the steering wheel",
+      "interval": 100,
+      "contents": {
+        "map_pw": {
+          "type": "float32",
+          "range": [-0.5, 1],
+          "precision": 0.1
+        },
+        "map_sc": {
+          "type": "float32",
+          "range": [0, 1],
+          "precision": 0.1
+        },
+        "map_tv": {
+          "type": "float32",
+          "range": [0, 1],
+          "precision": 0.1
+        }
+      }
+    },
+    {
+      "name": "SET_CAR_STATUS",
+      "topic": "DAS",
+      "priority": 4,
+      "sending": ["STEER"],
+      "receiving": ["DAS"],
+      "description": "Ask to DAS to change car status; only once",
+      "contents": {
+        "car_status_set": "SetCarStatus"
+      }
+    },
+    {
+      "name": "SET_PEDALS_RANGE",
+      "topic": "DAS",
+      "priority": 3,
+      "sending": ["STEER"],
+      "receiving": ["DAS"],
+      "description": "Ask to calibrate pedals by specifying which pedal to calibrate and if the value is max or min",
+      "contents": {
+        "bound": "Bound",
+        "pedal": "Pedal"
+      }
+    },
+    {
+      "name": "SET_STEERING_ANGLE_RANGE",
+      "topic": "DAS",
+      "priority": 3,
+      "sending": ["STEER"],
+      "receiving": ["DAS"],
+      "description": "Ask to calibrate steering encoder by specifying if the value is max or min",
+      "contents": {
+        "bound": "Bound"
+      }
+    },
+    {
+      "name": "CAR_STATUS",
+      "topic": "STEER",
+      "priority": 5,
+      "sending": ["DAS"],
+      "receiving": ["STEER"],
+      "description": "Car status, all states managed by the DAS will be send (car status, inverters status)",
+      "interval": 100,
+      "contents": {
+        "inverter_l": "InverterStatus",
+        "inverter_r": "InverterStatus",
+        "car_status": "CarStatus"
+      }
+    },
+    {
+      "name": "DAS_ERRORS",
+      "topic": "STEER",
+      "priority": 7,
+      "sending": ["DAS"],
+      "receiving": ["STEER"],
+      "description": "DAS errors messages",
+      "interval": 10,
+      "contents": {
+        "das_error": "DasErrors"
+      }
+    },
+    {
+      "name": "LV_CURRENT",
+      "topic": "DASnSTEER",
+      "priority": 4,
+      "sending": ["BMS_LV"],
+      "receiving": ["DAS", "STEER"],
+      "description": "Current of LV battery pack: total current taken from the battery itself",
+      "interval": 500,
+      "contents": {
+        "current": {
+          "type": "float32",
+          "range": [-10, 50],
+          "force": "uint16"
+        }
+      }
+    },
+    {
+      "name": "LV_VOLTAGE",
+      "topic": "DASnSTEER",
+      "priority": 4,
+      "sending": ["BMS_LV"],
+      "receiving": ["DAS", "STEER"],
+      "description": "Voltages of LV battery pack: 4x single cell voltage 8bit [3.3,4.2]V 0.005mV/bit (no additional info, 0x000 is 3V 0xFFFF is 4.2V)",
+      "interval": 100,
+      "contents": {
+        "voltage_1": {
+          "type": "float32",
+          "range": [0, 5],
+          "precision": 0.0001
+        },
+        "voltage_2": {
+          "type": "float32",
+          "range": [0, 5],
+          "precision": 0.0001
+        },
+        "voltage_3": {
+          "type": "float32",
+          "range": [0, 5],
+          "precision": 0.0001
+        },
+        "voltage_4": {
+          "type": "float32",
+          "range": [0, 5],
+          "precision": 0.0001
+        }
+      }
+    },
+    {
+      "name": "LV_TOTAL_VOLTAGE",
+      "topic": "DASnSTEER",
+      "priority": 4,
+      "sending": ["BMS_LV"],
+      "receiving": ["DAS", "STEER"],
+      "description": "Voltage of LV battery pack: total voltage 16 bit [12,17.2]V (0x0000 under_voltage,0xFFFF over_voltage",
+      "interval": 100,
+      "contents": {
+        "total_voltage": {
+          "type": "float32",
+          "range": [0, 16],
+          "precision": 0.0001
+        }
+      }
+    },
+    {
+      "name": "LV_TEMPERATURE",
+      "topic": "DASnSTEER",
+      "priority": 4,
+      "sending": ["BMS_LV"],
+      "receiving": ["DAS", "STEER"],
+      "description": "Temperature of LV battery pack (two sensors),[-20,80] Celsius. Temperature of dcdc12V and dcdc24V converter",
+      "interval": 100,
+      "contents": {
+        "bp_temperature_1": {
+          "type": "float32",
+          "range": [-20, 80],
+          "force": "uint16"
+        },
+        "bp_temperature_2": {
+          "type": "float32",
+          "range": [-20, 80],
+          "force": "uint16"
+        },
+        "dcdc12_temperature": {
+          "type": "float32",
+          "range": [-20, 80],
+          "force": "uint16"
+        },
+        "dcdc24_temperature": {
+          "type": "float32",
+          "range": [-20, 80],
+          "force": "uint16"
+        }
+      }
+    },
+    {
+      "name": "COOLING_STATUS",
+      "topic": "DASnSTEER",
+      "priority": 4,
+      "sending": ["BMS_LV"],
+      "receiving": ["DAS", "STEER"],
+      "description": "Percentage value from 0% to 100% of radiator fans and pumps speed, 8bit",
+      "interval": 1000,
+      "contents": {
+        "radiators_speed": {
+          "type": "float32",
+          "range": [-1, 1],
+          "force": "uint16"
+        },
+        "pumps_speed": {
+          "type": "float32",
+          "range": [-1, 1],
+          "force": "uint16"
+        }
+      }
+    },
+    {
+      "name": "SET_RADIATOR_SPEED",
+      "topic": "LV",
+      "priority": 4,
+      "sending": ["STEER"],
+      "receiving": ["BMS_LV"],
+      "description": "Set both radiators speed",
+      "contents": {
+        "radiators_speed": {
+          "type": "float32",
+          "range": [-1, 1],
+          "force": "uint16"
+        }
+      }
+    },
+    {
+      "name": "SET_PUMPS_SPEED",
+      "topic": "LV",
+      "priority": 4,
+      "sending": ["STEER"],
+      "receiving": ["BMS_LV"],
+      "description": "Set both pumps speed",
+      "contents": {
+        "pumps_speed": {
+          "type": "float32",
+          "range": [-1, 1],
+          "force": "uint16"
+        }
+      }
+    },
+    {
+      "name": "SET_INVERTER_CONNECTION_STATUS",
+      "topic": "LV",
+      "priority": 6,
+      "interval": 100,
+      "sending": ["DAS"],
+      "receiving": ["BMS_LV"],
+      "description": "Set the status of the inverter inputs RFE and RUN",
+      "contents": {
+        "status": "Toggle"
+      }
+    },
+    {
+      "name": "INVERTER_CONNECTION_STATUS",
+      "topic": "DASnSTEER",
+      "priority": 6,
+      "interval": 100,
+      "sending": ["BMS_LV"],
+      "receiving": ["DAS", "STEER"],
+      "description": "Inverter status",
+      "contents": {
+        "status": "Toggle"
+      }
+    },
+    {
+      "name": "LV_ERRORS",
+      "topic": "DASnSTEER",
+      "priority": 7,
+      "sending": ["BMS_LV"],
+      "receiving": ["DAS", "STEER", "TLM"],
+      "description": "LV Battery-related errors",
+      "interval": 10,
+      "contents": {
+        "warnings": "LvErrors",
+        "errors": "LvErrors"
+      }
+    },
+    {
+      "name": "SHUTDOWN_STATUS",
+      "topic": "DASnSTEER",
+      "priority": 6,
+      "interval": 500,
+      "sending": ["BMS_HV"],
+      "receiving": ["DAS", "STEER"],
+      "description": "Shutdown status",
+      "contents": {
+        "input": "bool",
+        "output": "bool"
+      }
+    },
+    {
+      "name": "MARKER",
+      "topic": "TLM",
+      "priority": 7,
+      "sending": ["STEER"],
+      "receiving": ["TLM"],
+      "description": "Send a marker to telemetry",
+      "contents": {}
+    },
+    {
+      "name": "HV_CELLS_VOLTAGE",
+      "topic": "HANDCART",
+      "priority": 5,
+      "sending": ["BMS_HV"],
+      "receiving": ["HANDCART"],
+      "description": "Voltages for each cell",
+      "interval": 100,
+      "contents": {
+        "start_index": "uint8",
+        "voltage_0": {
+          "type": "float32",
+          "range": [0, 5],
+          "precision": 0.0001
+        },
+        "voltage_1": {
+          "type": "float32",
+          "range": [0, 5],
+          "precision": 0.0001
+        },
+        "voltage_2": {
+          "type": "float32",
+          "range": [0, 5],
+          "precision": 0.0001
+        }
+      }
+    },
+    {
+      "name": "HV_CELLS_TEMP",
+      "topic": "HANDCART",
+      "priority": 5,
+      "sending": ["BMS_HV"],
+      "receiving": ["HANDCART", "TLM"],
+      "description": "Cell temperatures",
+      "interval": 100,
+      "contents": {
+        "start_index": "uint8",
+        "temp_0": {
+          "type": "float32",
+          "range": [-20, 80],
+          "force": "uint8"
+        },
+        "temp_1": {
+          "type": "float32",
+          "range": [-20, 80],
+          "force": "uint8"
+        },
+        "temp_2": {
+          "type": "float32",
+          "range": [-20, 80],
+          "force": "uint8"
+        },
+        "temp_3": {
+          "type": "float32",
+          "range": [-20, 80],
+          "force": "uint8"
+        },
+        "temp_4": {
+          "type": "float32",
+          "range": [-20, 80],
+          "force": "uint8"
+        },
+        "temp_5": {
+          "type": "float32",
+          "range": [-20, 80],
+          "force": "uint8"
+        }
+      }
+    },
+    {
+      "name": "HV_CELL_BALANCING_STATUS",
+      "topic": "HANDCART",
+      "priority": 5,
+      "sending": ["BMS_HV"],
+      "receiving": ["HANDCART"],
+      "description": "Cell balancing status",
+      "interval": 500,
+      "contents": {
+        "balancing_status": "Toggle"
+      }
+    },
+    {
+      "name": "SET_CELL_BALANCING_STATUS",
+      "topic": "BMS_HV",
+      "priority": 5,
+      "sending": ["HANDCART"],
+      "receiving": ["BMS_HV"],
+      "description": "Set cell balancing status; only once",
+      "contents": {
+        "set_balancing_status": "Toggle"
+      }
+    },
+    {
+      "name": "HANDCART_STATUS",
+      "topic": "BMS_HV",
+      "priority": 4,
+      "sending": ["HANDCART"],
+      "receiving": ["BMS_HV"],
+      "description": "Sends updates on the presence of the handcart",
+      "interval": 500,
+      "contents": {
+        "connected": "bool"
+      }
+    },
+    {
+      "name": "SPEED",
+      "topic": "STEER",
+      "priority": 5,
+      "sending": ["DAS"],
+      "receiving": ["STEER"],
+      "description": "Encoder and inverter speed in rad/sec",
+      "interval": 10,
+      "contents": {
+        "encoder_r": {
+          "type": "float32",
+          "force": "uint16",
+          "range": [-200, 200]
+        },
+        "encoder_l": {
+          "type": "float32",
+          "force": "uint16",
+          "range": [-200, 200]
+        },
+        "inverter_r": {
+          "type": "float32",
+          "force": "uint16",
+          "range": [-200, 200]
+        },
+        "inverter_l": {
+          "type": "float32",
+          "force": "uint16",
+          "range": [-200, 200]
+        }
+      }
+    },
+    {
+      "name": "INV_L_REQUEST",
+      "fixed_id": 513,
+      "sending": ["DAS"],
+      "receiving": ["INVERTER_L"],
+      "interval": 10,
+      "contents": {
+        "data_0": "uint8",
+        "data_1": "uint8",
+        "data_2": "uint8",
+        "data_3": "uint8",
+        "data_4": "uint8",
+        "data_5": "uint8",
+        "data_6": "uint8",
+        "data_7": "uint8"
+      }
+    },
+    {
+      "name": "INV_R_REQUEST",
+      "fixed_id": 514,
+      "sending": ["DAS"],
+      "receiving": ["INVERTER_L"],
+      "interval": 10,
+      "contents": {
+        "data_0": "uint8",
+        "data_1": "uint8",
+        "data_2": "uint8",
+        "data_3": "uint8",
+        "data_4": "uint8",
+        "data_5": "uint8",
+        "data_6": "uint8",
+        "data_7": "uint8"
+      }
+    },
+    {
+      "name": "INV_L_RESPONSE",
+      "fixed_id": 385,
+      "sending": ["INVERTER_L"],
+      "receiving": ["DAS"],
+      "interval": 100,
+      "contents": {
+        "reg_id": "uint8",
+        "data_0": "uint8",
+        "data_1": "uint8",
+        "data_2": "uint8",
+        "data_3": "uint8",
+        "data_4": "uint8",
+        "data_5": "uint8",
+        "data_6": "uint8"
+      }
+    },
+    {
+      "name": "INV_R_RESPONSE",
+      "fixed_id": 386,
+      "sending": ["INVERTER_L"],
+      "receiving": ["DAS"],
+      "interval": 100,
+      "contents": {
+        "reg_id": "uint8",
+        "data_0": "uint8",
+        "data_1": "uint8",
+        "data_2": "uint8",
+        "data_3": "uint8",
+        "data_4": "uint8",
+        "data_5": "uint8",
+        "data_6": "uint8"
+      }
+    },
+    {
+      "name": "FLASH_CELLBOARD_0_TX",
+      "fixed_id": 16,
+      "sending": ["HANDCART"],
+      "receiving": ["BMS_HV"],
+      "contents": {}
+    },
+    {
+      "name": "FLASH_CELLBOARD_0_RX",
+      "fixed_id": 17,
+      "sending": ["HANDCART"],
+      "receiving": ["BMS_HV"],
+      "contents": {}
+    },
+    {
+      "name": "FLASH_CELLBOARD_1_TX",
+      "fixed_id": 18,
+      "sending": ["HANDCART"],
+      "receiving": ["BMS_HV"],
+      "contents": {}
+    },
+    {
+      "name": "FLASH_CELLBOARD_1_RX",
+      "fixed_id": 19,
+      "sending": ["HANDCART"],
+      "receiving": ["BMS_HV"],
+      "contents": {}
+    },
+    {
+      "name": "FLASH_CELLBOARD_2_TX",
+      "fixed_id": 20,
+      "sending": ["HANDCART"],
+      "receiving": ["BMS_HV"],
+      "contents": {}
+    },
+    {
+      "name": "FLASH_CELLBOARD_2_RX",
+      "fixed_id": 21,
+      "sending": ["HANDCART"],
+      "receiving": ["BMS_HV"],
+      "contents": {}
+    },
+    {
+      "name": "FLASH_CELLBOARD_3_TX",
+      "fixed_id": 22,
+      "sending": ["HANDCART"],
+      "receiving": ["BMS_HV"],
+      "contents": {}
+    },
+    {
+      "name": "FLASH_CELLBOARD_3_RX",
+      "fixed_id": 23,
+      "sending": ["HANDCART"],
+      "receiving": ["BMS_HV"],
+      "contents": {}
+    },
+    {
+      "name": "FLASH_CELLBOARD_4_TX",
+      "fixed_id": 24,
+      "sending": ["HANDCART"],
+      "receiving": ["BMS_HV"],
+      "contents": {}
+    },
+    {
+      "name": "FLASH_CELLBOARD_4_RX",
+      "fixed_id": 25,
+      "sending": ["HANDCART"],
+      "receiving": ["BMS_HV"],
+      "contents": {}
+    },
+    {
+      "name": "FLASH_CELLBOARD_5_TX",
+      "fixed_id": 26,
+      "sending": ["HANDCART"],
+      "receiving": ["BMS_HV"],
+      "contents": {}
+    },
+    {
+      "name": "FLASH_CELLBOARD_5_RX",
+      "fixed_id": 27,
+      "sending": ["HANDCART"],
+      "receiving": ["BMS_HV"],
+      "contents": {}
+    },
+    {
+      "name": "FLASH_BMS_HV_TX",
+      "fixed_id": 2017,
+      "sending": ["HANDCART"],
+      "receiving": ["BMS_HV"],
+      "contents": {}
+    },
+    {
+      "name": "FLASH_BMS_HV_RX",
+      "fixed_id": 1639,
+      "sending": ["HANDCART"],
+      "receiving": ["BMS_HV"],
+      "contents": {}
+    },
+    {
+      "name": "FLASH_BMS_LV_TX",
+      "fixed_id": 2033,
+      "sending": ["HANDCART"],
+      "receiving": ["BMS_HV"],
+      "contents": {}
+    },
+    {
+      "name": "FLASH_BMS_LV_RX",
+      "fixed_id": 1655,
+      "sending": ["HANDCART"],
+      "receiving": ["BMS_HV"],
+      "contents": {}
+    },
+    {
+      "name": "BRUSA_NLG5_CTL",
+      "fixed_id": 618,
+      "sending": ["BRUSA"],
+      "receiving": ["HANDCART"],
+      "contents": {}
+    },
+    {
+      "name": "BRUSA_ST",
+      "fixed_id": 610,
+      "sending": ["BRUSA"],
+      "receiving": ["HANDCART"],
+      "contents": {}
+    },
+    {
+      "name": "BRUSA_ACT_I",
+      "fixed_id": 611,
+      "sending": ["BRUSA"],
+      "receiving": ["HANDCART"],
+      "contents": {}
+    },
+    {
+      "name": "BRUSA_ACT_II",
+      "fixed_id": 612,
+      "sending": ["BRUSA"],
+      "receiving": ["HANDCART"],
+      "contents": {}
+    },
+    {
+      "name": "BRUSA_TEMP",
+      "fixed_id": 613,
+      "sending": ["BRUSA"],
+      "receiving": ["HANDCART"],
+      "contents": {}
+    },
+    {
+      "name": "BRUSA_ERR",
+      "fixed_id": 614,
+      "sending": ["BRUSA"],
+      "receiving": ["HANDCART"],
+      "contents": {}
+    },
+    {
+      "name": "BMS_HV_CHIMERA",
+      "fixed_id": 170,
+      "sending": ["BMS_HV_CHIMERA"],
+      "receiving": ["HANDCART"],
+      "contents": {}
+    },
+    {
+      "name": "ECU_CHIMERA",
+      "fixed_id": 85,
+      "sending": ["ECU_CHIMERA"],
+      "receiving": ["BMS_HV_CHIMERA"],
+      "contents": {}
+    },
+    {
+      "name": "LC_RESET",
+      "topic": "LAPCOUNTER",
+      "priority": 5,
+      "sending": ["STEER"],
+      "receiving": ["TLM"],
+      "contents": {}
+    }
+  ]
+}

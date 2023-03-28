@@ -330,8 +330,7 @@ def load_string(string: str,
     '1.0'
 
     """
-
-    if database_format not in ['arxml', 'dbc', 'kcd', 'sym', 'cdd', None]:
+    if database_format not in ['arxml', 'dbc', 'kcd', 'sym', 'cdd', 'json', None]:
         raise ValueError(
             "expected database format 'arxml', 'dbc', 'kcd', 'sym', 'cdd' or "
             "None, but got '{}'".format(database_format))
@@ -355,6 +354,8 @@ def load_string(string: str,
             db.add_kcd_string(string)
         elif fmt == 'sym':
             db.add_sym_string(string)
+        elif fmt == 'json':
+            db.add_json_string(string)
 
         if prune_choices:
             utils.prune_database_choices(db)
@@ -384,6 +385,12 @@ def load_string(string: str,
             return load_can_database('sym')
         except ParseError as e:
             e_sym = e
+
+    if database_format in ['json', None]:
+        try:
+            return load_can_database('json')
+        except ParseError as e:
+            e_json = e
 
     if database_format in ['cdd', None]:
         try:
