@@ -732,9 +732,16 @@ MESSAGE_DECLARATION_TO_STRING = '''int {database_name}_{message_name}_to_string(
 MESSAGE_DEFINITION_TO_STRING = '''int {database_name}_{message_name}_to_string({database_name}_{message_name}_converted_t *message, char *buffer){{
     return sprintf(
         buffer,
+        ""
         #ifdef CANLIB_TIMESTAMP
         "%u"","
         #endif // CANLIB_TIMESTAMP
+'''
+
+DEFINITION_TO_STRING_FILE_NO_SIGNALS = '''int {database_name}_{message_name}_to_string({database_name}_{message_name}_converted_t *message, char *buffer){{return 0;}}
+int {database_name}_{message_name}_fields(char *buffer) {{return 0;}}
+int {database_name}_{message_name}_to_string_file({database_name}_{message_name}_converted_t *message, FILE *buffer){{return 0;}}
+int {database_name}_{message_name}_fields_file(FILE *buffer){{return 0;}}
 '''
 
 SIGNAL_DEFINITION_SPECIFIER = '''    "{specifier}"","
@@ -748,6 +755,7 @@ MESSAGE_DECLARATION_FIELDS = '''int {database_name}_{message_name}_fields(char *
 MESSAGE_DEFINITION_FIELDS = '''int {database_name}_{message_name}_fields(char *buffer){{
     return sprintf(
         buffer,
+        ""
         #ifdef CANLIB_TIMESTAMP
             "_timestamp" ","
         #endif // CANLIB_TIMESTAMP
@@ -764,6 +772,7 @@ MESSAGE_DECLARATION_TO_STRING_FILE = '''int {database_name}_{message_name}_to_st
 MESSAGE_DEFINITION_TO_STRING_FILE = '''int {database_name}_{message_name}_to_string_file({database_name}_{message_name}_converted_t *message, FILE *buffer){{
     return fprintf(
         buffer,
+        ""
         #ifdef CANLIB_TIMESTAMP
         "%u"","
         #endif // CANLIB_TIMESTAMP
@@ -775,6 +784,7 @@ MESSAGE_DECLARATION_FIELDS_FILE = '''int {database_name}_{message_name}_fields_f
 MESSAGE_DEFINITION_FIELDS_FILE = '''int {database_name}_{message_name}_fields_file(FILE *buffer){{
     return fprintf(
         buffer,
+        ""
         #ifdef CANLIB_TIMESTAMP
             "_timestamp" ","
         #endif // CANLIB_TIMESTAMP
@@ -1680,7 +1690,6 @@ def _generate_is_extended_frame_defines(database_name, messages, node_name):
             int(message.is_extended_frame))
         for message in messages if _is_sender_or_receiver(message, node_name)
     ])
-
     return result
 
 
@@ -1694,7 +1703,6 @@ def _generate_choices_defines(database_name, messages, node_name):
                 continue
             if not is_sender and not _is_receiver(signal, node_name):
                 continue
-
             choices = _format_choices(signal, signal.snake_name)
             signal_choices_defines = '\n'.join([
                 '#define {}_{}_{}'.format(database_name.upper(),
@@ -1763,6 +1771,8 @@ def _get_conversion_to_raw_head(database_name, message):
             type = signal.type_name
         signals.append(SIGNAL_DECLARATION_TO_.format(signal_type=type,
                                                     signal_name=signal.snake_name))
+    if len(signals) <= 0:
+        return '\n'
     signals[-1] = signals[-1][:-2]
     message_conversion_to_raw = MESSAGE_DEFINITION_CONVERSION_TO_RAW.format(database_name=database_name,
                                                                             message_name=message.snake_name,
@@ -1781,6 +1791,8 @@ def _get_raw_to_conversion_head(database_name, message):
             type = signal.type_name
         signals.append(SIGNAL_DECLARATION_TO_.format(signal_type=type,
                                                     signal_name=signal.snake_name))
+    if len(signals) <= 0:
+        return '\n'
     signals[-1] = signals[-1][:-2]
     message_raw_to_conversion = MESSAGE_DEFINITION_RAW_TO_CONVERSION.format(database_name=database_name,
                                                                             message_name=message.snake_name,
@@ -1795,7 +1807,6 @@ def _generate_declarations(database_name, messages, floating_point_numbers, use_
         signal_declarations = []
         is_sender = _is_sender(message, node_name)
         is_receiver = node_name is None
-
         for signal in message.signals:
             if _is_receiver(signal, node_name):
                 is_receiver = True
@@ -2040,15 +2051,18 @@ def _generate_definitions(database_name, messages, floating_point_numbers, use_f
 
                 signal_definitions.append(signal_definition)
         
-        signal_definitions.append(message_raw_to_conversion + "}\n")
-        signal_definitions.append(message_conversion_to_raw + "}\n")
-        signal_definitions.append(message_raw_to_conversion_struct+"}\n")
-        signal_definitions.append(message_conversion_to_raw_struct+"}\n")
-        signal_definitions.append(message_to_string + signals_specifiers[:-4] + ",\n" + signals_to_string[:-2] + ");\n}\n")
-        signal_definitions.append(message_to_string_file + signals_specifiers[:-4] + ",\n" + signals_to_string[:-2] + ");\n}\n")
-        signal_definitions.append(message_fields_string + message_fields[:-5] + ");\n}\n")
-        signal_definitions.append(message_fields_file + message_fields[:-5] + ");\n}\n")
-
+        if message._message.length > 0:
+            signal_definitions.append(message_raw_to_conversion + "}\n")
+            signal_definitions.append(message_conversion_to_raw + "}\n")
+            signal_definitions.append(message_raw_to_conversion_struct+"}\n")
+            signal_definitions.append(message_conversion_to_raw_struct+"}\n")
+            signal_definitions.append(message_to_string + signals_specifiers[:-4] + ",\n" + signals_to_string[:-2] + "\n);\n}\n")
+            signal_definitions.append(message_to_string_file + signals_specifiers[:-4] + ",\n" + signals_to_string[:-2] + "\n);\n}\n")
+            signal_definitions.append(message_fields_string + message_fields[:-5] + ");\n}\n")
+            signal_definitions.append(message_fields_file + message_fields[:-5] + ");\n}\n")
+        else:
+            signal_definitions.append(DEFINITION_TO_STRING_FILE_NO_SIGNALS.format(database_name=database_name,
+                                                                message_name=message.snake_name))
         if message.length > 0:
             pack_variables, pack_body = _format_pack_code(message,
                                                           pack_helper_kinds)

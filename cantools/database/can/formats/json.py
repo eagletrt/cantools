@@ -1,9 +1,10 @@
-from ..signal import Signal
+from ..signal import Signal, Decimal
 from ..message import Message
 from ..node import Node
 from ....errors import Error
 from ..internal_database import InternalDatabase
 import json
+import math
 
 from ...utils import (
     type_sort_signals,
@@ -103,21 +104,46 @@ def generate_topics_id(db):
     return ids
 
 
-lenghts = {'uint8': 8, 'int8': 8, 'uint16': 16, 'int16': 16, 'uint32': 32, 'int32': 32,
-            'uint64': 64, 'int64': 64}
+lengths = {'bool': 1, 'uint8': 8, 'int8': 8, 'uint16': 16, 'int16': 16, 'uint32': 32, 'int32': 32,
+            'uint64': 64, 'int64': 64, 'float32': 32}
 
-def get_signal(name, signal, offset: int, types):
-    if name in types:
-        type = types['name'][type]
-    else:
-        if isinstance(signal, dict):
-            type = signal
-        elif 'force' in signal:
-            type = signal['force']
+def get_length(range, precision):
+    return math.ceil((math.log2(range//precision)+1)/8)
+
+def get_signals(name, signal, offset: int, types):
+    is_float = False
+    choices = None
+    precision = 1
+    if isinstance(signal, dict):
+        if 'force' in signal:
+            if signal['type'][:4] == 'float':
+                is_float = True
+            type = lengths[signal['force']]
+            minimum = 0
+            maximum = 1<<type
         else:
-            #range and precision
-            return None
-    return (offset+1, Signal(name, offset, 1))
+            maximum = signal['range'][0]
+            minimum = signal['range'][1]
+            range = maximum - minimum
+            precision = signal['precision'] if 'precision' in signal else 1
+            type = get_length(abs(range), precision)
+    else:
+        if signal in types:
+            if types[signal]['type'] == 'enum':
+                type = get_length(len(types[signal]['items']), 1)
+                choices = [(i,j) for i, j in enumerate(types[signal]['items'])]
+            else:       #bitset
+                ret = []
+                for item in types[signal]['items']:
+                    ret.append(Signal(name + '_' + item, offset, 1, is_float=False, minimum=0, maximum=0, decimal=Decimal(1, 0, 0, 1)))
+                    offset += 1
+                return (offset, ret)
+        else:
+            type = lengths[signal]
+        minimum = 0
+        maximum = 1<<type
+    return (offset+type, [Signal(name, offset, type, is_float=is_float, minimum=minimum, maximum=maximum, scale=precision,
+                            decimal=Decimal(precision, 0, minimum, maximum))])
 
 def get_reserved_ids(db) -> set:
     ret = set()
@@ -130,6 +156,14 @@ def load_string(string: str, strict: bool = True,
                 sort_signals: type_sort_signals = sort_signals_by_start_bit) -> InternalDatabase:
     db = json.loads(string)
 
+    nodes = set()
+
+    for i in db['messages']:
+        for j in i['sending']:
+            nodes.add(j)
+        for j in i['receiving']:
+            nodes.add(j)
+    msgs = []
     reserved_ids = get_reserved_ids(db)
     ids = generate_ids(db, reserved_ids)
     for message in db['messages']:
@@ -144,6 +178,7 @@ def load_string(string: str, strict: bool = True,
             signals = []
             offset = 0
             for signal in message['contents']:
-                offset, s = get_signal(signal, message['contents'][signal], offset)
-                signals.append(s)
-            msg = Message(id, message['name'], len(signals), signals)
+                offset, s = get_signals(signal, message['contents'][signal], offset, db['types'])
+                signals += s
+        msgs.append(Message(id, message['name'], offset, signals))
+    return InternalDatabase(msgs, list(nodes), [], "1")

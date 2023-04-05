@@ -232,7 +232,7 @@ class Database:
 
         self._messages += database.messages
         self._nodes = database.nodes
-        #self._buses = database.buses
+        self._buses = database.buses
         self.refresh()
 
     def add_kcd(self, fp: TextIO) -> None:
