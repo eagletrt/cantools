@@ -60,6 +60,16 @@ extern "C" {{
 #include <stdbool.h>
 #include <stddef.h>
 
+#ifndef INVLIB_PARKING
+/* We know it's PACKING but PARKING sounds a bit better ;) */
+#if defined(__MINGW32__)
+#define INVLIB_PARKING                                                         \
+  __attribute__((__gcc_struct__, __packed__)) // , __aligned__(1)))
+#else
+#define INVLIB_PARKING __attribute__((__packed__)) // , __aligned__(1)))
+#endif                                             // defined(__MINGW32__)
+#endif                                             // INVLIB_PARKING
+
 #ifndef EINVAL
 #    define EINVAL 22
 #endif
@@ -370,7 +380,7 @@ STRUCT_FMT = '''\
 {comment}\
  * All signal values are as on the CAN bus.
  */
-typedef struct  {{
+typedef struct INVLIB_PARKING {{
 {members}
 
 #ifdef CANLIB_TIMESTAMP
@@ -725,6 +735,15 @@ SIGNAL_MEMBER_FMT = '''\
      */
     {type_name} {name}{length};\
 '''
+SIGNAL_MEMBER_FMT_BOOL = '''\
+    /**
+{comment}\
+     * Range: {range}
+     * Scale: {scale}
+     * Offset: {offset}
+     */
+    unsigned int {name}{length} : 1;\
+'''
 
 MESSAGE_DECLARATION_TO_STRING = '''int {database_name}_{message_name}_to_string({database_name}_{message_name}_converted_t *message, char *buffer);
 '''
@@ -931,7 +950,7 @@ class Signal:
 
     @property
     def is_float_conversion(self):
-        return _get(self.scale, '-') % 1 != 0 or self.minimum_value % 1 != 0 or self.maximum_value % 1 != 0
+        return self.is_float or _get(self.scale, '-') % 1 != 0 or self.minimum_value % 1 != 0 or self.maximum_value % 1 != 0
 
     @property
     def minimum_type_value(self):
@@ -1162,6 +1181,14 @@ def _generate_signal_converted(signal, bit_fields, database_name, message):
         _type = 'float'
     else:
         _type = signal.type_name
+
+    if signal.length <= 1:
+        return SIGNAL_MEMBER_FMT_BOOL.format(comment=comment,
+                                      range=range_,
+                                      scale=scale,
+                                      offset=offset,
+                                      name=signal.snake_name,
+                                      length=length)
 
     member = SIGNAL_MEMBER_FMT.format(comment=comment,
                                       range=range_,
@@ -1549,8 +1576,8 @@ def _format_choices(signal, signal_name):
             fmt = '{signal_name}_{name}_CHOICE ({value}u)'
 
         choices.append(fmt.format(signal_name=signal_name.upper(),
-                                  name=str(name),
-                                  value=value))
+                                name=str(name),
+                                value=value))
 
     return choices
 

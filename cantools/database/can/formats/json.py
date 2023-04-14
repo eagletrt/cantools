@@ -3,6 +3,7 @@ from ..message import Message
 from ..node import Node
 from ....errors import Error
 from ..internal_database import InternalDatabase
+from collections import OrderedDict
 import json
 import math
 
@@ -115,12 +116,16 @@ def get_signals(name, signal, offset: int, types):
     choices = None
     precision = 1
     if isinstance(signal, dict):
+        if signal['type'][:5] == 'float':
+            is_float = True
         if 'force' in signal:
-            if signal['type'][:4] == 'float':
-                is_float = True
             type = lengths[signal['force']]
-            minimum = 0
-            maximum = 1<<type
+            if 'range' in signal:
+                maximum = signal['range'][0]
+                minimum = signal['range'][1]
+            else:
+                minimum = 0
+                maximum = 1<<type
         else:
             maximum = signal['range'][0]
             minimum = signal['range'][1]
@@ -131,7 +136,7 @@ def get_signals(name, signal, offset: int, types):
         if signal in types:
             if types[signal]['type'] == 'enum':
                 type = get_length(len(types[signal]['items']), 1)
-                choices = [(i,j) for i, j in enumerate(types[signal]['items'])]
+                choices = OrderedDict([(i,j) for i, j in enumerate(types[signal]['items'])])
             else:       #bitset
                 ret = []
                 for item in types[signal]['items']:
@@ -142,8 +147,12 @@ def get_signals(name, signal, offset: int, types):
             type = lengths[signal]
         minimum = 0
         maximum = 1<<type
-    return (offset+type, [Signal(name, offset, type, is_float=is_float, minimum=minimum, maximum=maximum, scale=precision,
-                            decimal=Decimal(precision, 0, minimum, maximum))])
+    if maximum < minimum:
+        maximum, minimum = minimum, maximum
+    if is_float:
+        precision = abs(maximum-minimum) / (1<<type)
+    return (offset+type, [Signal(name, offset, type, is_float=False, minimum=minimum, maximum=maximum, offset=(minimum), scale=precision,
+                            decimal=Decimal(precision, (minimum), minimum, maximum), choices=choices)])
 
 def get_reserved_ids(db) -> set:
     ret = set()
@@ -166,7 +175,10 @@ def load_string(string: str, strict: bool = True,
     msgs = []
     reserved_ids = get_reserved_ids(db)
     ids = generate_ids(db, reserved_ids)
+    comment = ''
     for message in db['messages']:
+        if 'description' in message:
+            comment = message['description']
         for sending in message['sending']:
             if 'topic' in message:
                 if len(message['sending']) > 1:
@@ -180,5 +192,5 @@ def load_string(string: str, strict: bool = True,
             for signal in message['contents']:
                 offset, s = get_signals(signal, message['contents'][signal], offset, db['types'])
                 signals += s
-        msgs.append(Message(id, message['name'], offset, signals))
+        msgs.append(Message(id, message['name'], offset, signals, comment=comment))
     return InternalDatabase(msgs, list(nodes), [], "1")
