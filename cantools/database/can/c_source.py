@@ -113,8 +113,8 @@ void {database_name}_devices_deserialize_from_id(
 #endif // CANLIB_TIMESTAMP
 );
 
-static inline int {database_name}_index_from_id(uint16_t id);
-static inline int {database_name}_id_from_index(int index);
+static int {database_name}_index_from_id(uint16_t id);
+static int {database_name}_id_from_index(int index);
 
 {structs}
 {declarations}
@@ -529,7 +529,7 @@ bool {database_name}_{message_name}_{signal_name}_is_in_range({type_name} value)
 '''
 
 PACK_HELPER_LEFT_SHIFT_FMT = '''\
-static inline uint8_t pack_left_shift_u{length}(
+static uint8_t pack_left_shift_u{length}(
     {var_type} value,
     uint8_t shift,
     uint8_t mask)
@@ -539,7 +539,7 @@ static inline uint8_t pack_left_shift_u{length}(
 '''
 
 PACK_HELPER_RIGHT_SHIFT_FMT = '''\
-static inline uint8_t pack_right_shift_u{length}(
+static uint8_t pack_right_shift_u{length}(
     {var_type} value,
     uint8_t shift,
     uint8_t mask)
@@ -549,7 +549,7 @@ static inline uint8_t pack_right_shift_u{length}(
 '''
 
 UNPACK_HELPER_LEFT_SHIFT_FMT = '''\
-static inline {var_type} unpack_left_shift_u{length}(
+static {var_type} unpack_left_shift_u{length}(
     uint8_t value,
     uint8_t shift,
     uint8_t mask)
@@ -559,7 +559,7 @@ static inline {var_type} unpack_left_shift_u{length}(
 '''
 
 UNPACK_HELPER_RIGHT_SHIFT_FMT = '''\
-static inline {var_type} unpack_right_shift_u{length}(
+static {var_type} unpack_right_shift_u{length}(
     uint8_t value,
     uint8_t shift,
     uint8_t mask)
@@ -780,7 +780,7 @@ MESSAGE_DEFINITION_FIELDS = '''int {database_name}_{message_name}_fields(char *b
         #endif // CANLIB_TIMESTAMP
 '''
 
-SIGNAL_DEFINITION_FIELDS = '''    "{signal_name}"",",
+SIGNAL_DEFINITION_FIELDS = '''    "{signal_name}"","
 '''
 
 #FILE
@@ -824,14 +824,14 @@ MESSAGE_FIELD_FILE_FROM_ID = '''    case {id}:
             return {database_name}_{message_name}_fields_file(buffer);
     '''
 
-ID_FROM_INDEX = '''static inline int {database_name}_id_from_index(int index){{
+ID_FROM_INDEX = '''static int {database_name}_id_from_index(int index){{
     switch (index) {{
 {body}\
     }}
     return -1;
 }}
 '''
-INDEX_FROM_ID = '''static inline int {database_name}_index_from_id(uint16_t id) {{
+INDEX_FROM_ID = '''static int {database_name}_index_from_id(uint16_t id) {{
     switch (id) {{
 {body}\
     }}
@@ -2085,8 +2085,8 @@ def _generate_definitions(database_name, messages, floating_point_numbers, use_f
             signal_definitions.append(message_conversion_to_raw_struct+"}\n")
             signal_definitions.append(message_to_string + signals_specifiers[:-4] + ",\n" + signals_to_string[:-2] + "\n);\n}\n")
             signal_definitions.append(message_to_string_file + signals_specifiers[:-4] + ",\n" + signals_to_string[:-2] + "\n);\n}\n")
-            signal_definitions.append(message_fields_string + message_fields[:-5] + ");\n}\n")
-            signal_definitions.append(message_fields_file + message_fields[:-5] + ");\n}\n")
+            signal_definitions.append(message_fields_string + message_fields[:-4] + ");\n}\n")
+            signal_definitions.append(message_fields_file + message_fields[:-4] + ");\n}\n")
         else:
             signal_definitions.append(DEFINITION_TO_STRING_FILE_NO_SIGNALS.format(database_name=database_name,
                                                                 message_name=message.snake_name))
