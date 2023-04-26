@@ -150,7 +150,7 @@ def get_signals(name, signal, offset: int, types):
     if maximum < minimum:
         maximum, minimum = minimum, maximum
     if is_float:
-        precision = abs(maximum-minimum) / (1<<type)
+        precision = abs(maximum-minimum) / ((1<<type)-1)
     return (offset+type, [Signal(name, offset, type, is_float=False, minimum=minimum, maximum=maximum, offset=(minimum), scale=precision,
                             decimal=Decimal(precision, (minimum), minimum, maximum), choices=choices)])
 
