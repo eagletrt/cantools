@@ -430,7 +430,7 @@ DEVICE_MESSAGE_DESERIALIZE = '''\
             {database_name}_{message_name}_unpack(
                 ({database_name}_{message_name}_t*) &(*devices)[{database_name}_{message_name}_INDEX].message_raw,
                 data,
-                sizeof({database_name}_{message_name}_t)
+                {message_length}
                 #ifdef CANLIB_TIMESTAMP
                 , timestamp
                 #endif
@@ -1959,7 +1959,8 @@ def _generate_definitions(database_name, messages, floating_point_numbers, use_f
                                                 message_name=message.snake_name)
         devices_deserialize += DEVICE_MESSAGE_DESERIALIZE.format(id=message._message._frame_id,
                                                                 message_name=message.snake_name,
-                                                                database_name=database_name)
+                                                                database_name=database_name,
+                                                                message_length=message.length)
 
         to_string_from_id += MESSAGE_STRING_FROM_ID.format(id=message._message._frame_id,
                                                             database_name=database_name,
