@@ -154,15 +154,17 @@ def get_signals(name, signal, offset: int, types):
     return (offset+type, [Signal(name, offset, type, is_float=False, minimum=minimum, maximum=maximum, offset=(minimum), scale=precision,
                             decimal=Decimal(precision, (minimum), minimum, maximum), choices=choices)])
 
-def get_reserved_ids(db) -> set:
+def get_reserved_ids(db, messages) -> set:
     ret = set()
+    for message in messages:
+        ret.add(message.frame_id)
     for message in db['messages']:
         if 'fixed_id' in message:
             ret.add(message['fixed_id'])
     return ret
 
 def load_string(string: str, strict: bool = True,
-                sort_signals: type_sort_signals = sort_signals_by_start_bit) -> InternalDatabase:
+                sort_signals: type_sort_signals = sort_signals_by_start_bit, messages = []) -> InternalDatabase:
     db = json.loads(string)
 
     nodes = set()
@@ -173,7 +175,7 @@ def load_string(string: str, strict: bool = True,
         for j in i['receiving']:
             nodes.add(j)
     msgs = []
-    reserved_ids = get_reserved_ids(db)
+    reserved_ids = get_reserved_ids(db, messages)
     ids = generate_ids(db, reserved_ids)
     comment = ''
     for message in db['messages']:

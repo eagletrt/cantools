@@ -6,19 +6,23 @@ from .. import database
 from ..database.can.c_source import generate
 from ..database.can.c_source import camel_to_snake_case
 
-
 def _do_generate_c_source(args):
     dbase = database.load_file(args.infile,
                                encoding=args.encoding,
                                prune_choices=args.prune,
                                strict=not args.no_strict)
-
     if args.database_name is None:
         basename = os.path.basename(args.infile)
         database_name = os.path.splitext(basename)[0]
         database_name = camel_to_snake_case(database_name)
     else:
         database_name = args.database_name
+    generate_from_db(dbase, database_name, args.no_floating_point_numbers, args.generate_fuzzer, args.bit_fields,
+                     args.use_float, args.node, args.output_directory)
+
+
+def generate_from_db(dbase, database_name, no_floating_point_numbers = False, generate_fuzzer = False, bit_fields=False,
+                     use_float=True, node=None, output_directory='.'):
 
     filename_h = database_name + '.h'
     filename_c = database_name + '.c'
@@ -31,32 +35,32 @@ def _do_generate_c_source(args):
         filename_h,
         filename_c,
         fuzzer_filename_c,
-        not args.no_floating_point_numbers,
-        args.bit_fields,
-        args.use_float,
-        args.node)
+        not no_floating_point_numbers,
+        bit_fields,
+        use_float,
+        node)
 
-    os.makedirs(args.output_directory, exist_ok=True)
+    os.makedirs(output_directory, exist_ok=True)
     
-    path_h = os.path.join(args.output_directory, filename_h)
+    path_h = os.path.join(output_directory, filename_h)
     
     with open(path_h, 'w') as fout:
         fout.write(header)
 
-    path_c = os.path.join(args.output_directory, filename_c)
+    path_c = os.path.join(output_directory, filename_c)
 
     with open(path_c, 'w') as fout:
         fout.write(source)
 
     print(f'Successfully generated {path_h} and {path_c}.')
 
-    if args.generate_fuzzer:
-        fuzzer_path_c = os.path.join(args.output_directory, fuzzer_filename_c)
+    if generate_fuzzer:
+        fuzzer_path_c = os.path.join(output_directory, fuzzer_filename_c)
 
         with open(fuzzer_path_c, 'w') as fout:
             fout.write(fuzzer_source)
 
-        fuzzer_path_mk = os.path.join(args.output_directory, fuzzer_filename_mk)
+        fuzzer_path_mk = os.path.join(output_directory, fuzzer_filename_mk)
 
         with open(fuzzer_filename_mk, 'w') as fout:
             fout.write(fuzzer_makefile)

@@ -29,6 +29,7 @@ from ..utils import (
 )
 from ...compat import fopen
 from ...typechecking import StringPathLike, EncodeInputType, DecodeResultType
+from ...subparsers.generate_c_source import generate_from_db
 
 LOGGER = logging.getLogger(__name__)
 
@@ -228,7 +229,7 @@ class Database:
         self.refresh()
 
     def add_json_string(self, string: str) -> None:
-        database = json.load_string(string, self._strict, sort_signals=self._sort_signals)
+        database = json.load_string(string, self._strict, sort_signals=self._sort_signals, messages = self.messages)
 
         self._messages += database.messages
         self._nodes = database.nodes
@@ -548,3 +549,6 @@ class Database:
             lines.append('')
 
         return '\n'.join(lines)
+
+    def generate_c_source(self, name):
+        generate_from_db(self, name)
