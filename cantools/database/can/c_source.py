@@ -709,7 +709,11 @@ int {database_name}_{message_name}_pack(
 int {database_name}_{message_name}_unpack(
     {database_name}_{message_name}_t *dst_p,
     const uint8_t *src_p,
-    size_t size)
+    size_t size
+    #ifdef CANLIB_TIMESTAMP
+        , uint64_t _timestamp
+    #endif // CANLIB_TIMESTAM
+)
 {{
     (void)dst_p;
     (void)src_p;
