@@ -107,6 +107,7 @@ def generate_topics_id(db):
 
 lengths = {'bool': 1, 'uint8': 8, 'int8': 8, 'uint16': 16, 'int16': 16, 'uint32': 32, 'int32': 32,
             'uint64': 64, 'int64': 64, 'float32': 32}
+types_size = [1, 8, 16, 32, 64]
 
 def get_length(range, precision):
     return math.ceil((math.log2(range//precision)+1)/8)
@@ -151,6 +152,10 @@ def get_signals(name, signal, offset: int, types):
         maximum, minimum = minimum, maximum
     if is_float:
         precision = abs(maximum-minimum) / ((1<<type)-1)
+    for i in types_size:
+        if i > type:
+            type = i
+            break
     return (offset+type, [Signal(name, offset, type, is_float=False, minimum=minimum, maximum=maximum, offset=(minimum), scale=precision,
                             decimal=Decimal(precision, (minimum), minimum, maximum), choices=choices)])
 
@@ -171,9 +176,9 @@ def load_string(string: str, strict: bool = True,
 
     for i in db['messages']:
         for j in i['sending']:
-            nodes.add(j)
+            nodes.add(Node(j))
         for j in i['receiving']:
-            nodes.add(j)
+            nodes.add(Node(j))
     msgs = []
     reserved_ids = get_reserved_ids(db, messages)
     ids = generate_ids(db, reserved_ids)

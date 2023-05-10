@@ -5,6 +5,7 @@ import os.path
 from .. import database
 from ..database.can.c_source import generate
 from ..database.can.c_source import camel_to_snake_case
+from ..database.can.proto import generate_proto
 
 def _do_generate_c_source(args):
     dbase = database.load_file(args.infile,
@@ -28,7 +29,10 @@ def generate_from_db(dbase, database_name, no_floating_point_numbers = False, ge
     filename_c = database_name + '.c'
     fuzzer_filename_c = database_name + '_fuzzer.c'
     fuzzer_filename_mk = database_name + '_fuzzer.mk'
+    filename_proto = database_name + ".proto"
 
+    proto = generate_proto(dbase, database_name)
+    
     header, source, fuzzer_source, fuzzer_makefile = generate(
         dbase,
         database_name,
@@ -51,6 +55,11 @@ def generate_from_db(dbase, database_name, no_floating_point_numbers = False, ge
 
     with open(path_c, 'w') as fout:
         fout.write(source)
+
+    path_proto = os.path.join(output_directory, filename_proto)
+
+    with open(path_proto, 'w') as fout:
+        fout.write(proto)
 
     print(f'Successfully generated {path_h} and {path_c}.')
 
