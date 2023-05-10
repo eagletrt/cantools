@@ -12,6 +12,7 @@ package primary;
 
 {messages_body}
 
+{pack_body}
 '''
 
 def is_float_conversion(signal):
@@ -46,7 +47,7 @@ def _generate_enums(database_name, messages):
     for enum in s:
         ret += "enum " + enum + " {\n"
         for choice in s[enum]:
-            ret += f"\t{s[enum][choice]} = {choice};\n"
+            ret += f"\t{s[enum][choice]} = {choice+1};\n"
         ret += "}\n"
     return ret
 
@@ -63,8 +64,16 @@ def _generate_messages(database_name, messages):
         ret += "}\n"
     return ret
 
+def _generate_pack(database_name, messages):
+    ret = "message Pack{\n"
+    for i, msg in enumerate(messages):
+        ret += f"\trepeated {msg.name} {msg.name} = {i+1};\n"
+    ret += "}\n"
+    return ret
+
 def generate_proto(database, database_name):
     messages = database.messages
     enums = _generate_enums(database_name, messages)
-    messages = _generate_messages(database_name, messages)
-    return PROTO.format(enum_body=enums, messages_body=messages)
+    msgs = _generate_messages(database_name, messages)
+    pack = _generate_pack(database_name, messages)
+    return PROTO.format(enum_body=enums, messages_body=msgs, pack_body=pack)
