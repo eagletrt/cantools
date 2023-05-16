@@ -228,6 +228,10 @@ class Database:
         self._dbc = database.dbc
         self.refresh()
 
+    def add_json_file(self, name: str, encoding: str = 'cp1252') -> None:
+        with fopen(name, 'r', encoding=encoding) as fin:
+            self.add_json_string(fin.read())
+
     def add_json_string(self, string: str) -> None:
         database = json.load_string(string, self._strict, sort_signals=self._sort_signals, messages = self.messages)
 
