@@ -6,6 +6,7 @@ from .. import database
 from ..database.can.c_source import generate
 from ..database.can.c_source import camel_to_snake_case
 from ..database.can.proto import generate_proto
+from ..database.can.proto_interface import generate_proto_interface
 
 def _do_generate_c_source(args):
     dbase = database.load_file(args.infile,
@@ -30,8 +31,10 @@ def generate_from_db(dbase, database_name, no_floating_point_numbers = False, ge
     fuzzer_filename_c = database_name + '_fuzzer.c'
     fuzzer_filename_mk = database_name + '_fuzzer.mk'
     filename_proto = database_name + ".proto"
+    filename_proto_interface = database_name + "_proto_interface.h"
 
     proto = generate_proto(dbase, database_name)
+    proto_interface = generate_proto_interface(dbase, database_name)
     
     header, source, fuzzer_source, fuzzer_makefile = generate(
         dbase,
@@ -61,7 +64,13 @@ def generate_from_db(dbase, database_name, no_floating_point_numbers = False, ge
     with open(path_proto, 'w') as fout:
         fout.write(proto)
 
-    print(f'Successfully generated {path_h} and {path_c}.')
+    path_proto_interface = os.path.join(output_directory, filename_proto_interface)
+
+    with open(path_proto_interface, 'w') as fout:
+        fout.write(proto_interface)
+
+
+    print(f'Successfully generated {path_h} and {path_c} and {path_proto} and {path_proto_interface}.')
 
     if generate_fuzzer:
         fuzzer_path_c = os.path.join(output_directory, fuzzer_filename_c)

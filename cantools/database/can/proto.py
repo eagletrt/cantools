@@ -29,7 +29,7 @@ def type_name(database_name, message_name, signal):
     else:
         if signal.length == 1:
             return 'bool'
-        type_name = f'int{signal.length}'
+        type_name = f'int{32 if signal.length <= 32 else 64}'
 
         if not signal.is_signed:
             type_name = 'u' + type_name
@@ -47,7 +47,7 @@ def _generate_enums(database_name, messages):
     for enum in s:
         ret += "enum " + enum + " {\n"
         for choice in s[enum]:
-            ret += f"\t{s[enum][choice]} = {choice+1};\n"
+            ret += f"\t{enum}_{s[enum][choice]} = {choice};\n"
         ret += "}\n"
     return ret
 
