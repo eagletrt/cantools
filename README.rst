@@ -9,7 +9,7 @@ EAGLE
    >>> import cantools
    >>> db = cantools.database.load_file('file.dbc')
    >>> db.add_json_file('file.json')
-   >>> print(db.as_dbc_string(shorten_long_names=True))
+   >>> print(db.as_dbc_string())
 
 .. code-block:: bash
 
