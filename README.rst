@@ -2,6 +2,19 @@
 |coverage|_
 |nala|_
 
+EAGLE
+=====
+.. code-block:: python
+
+   >>> import cantools
+   >>> db = cantools.database.load_file('file.dbc')
+   >>> db.add_json_file('file.json')
+   >>> print(db.as_dbc_string(shorten_long_names=True))
+
+.. code-block:: bash
+
+   python3 -m cantools generate_c_source --use-float file.dbc
+
 About
 =====
 
