@@ -7,6 +7,7 @@ from ..database.can.c_source import generate
 from ..database.can.c_source import camel_to_snake_case
 from ..database.can.proto import generate_proto
 from ..database.can.proto_interface import generate_proto_interface
+from ..database.can.watchdog import generate_watchdog
 
 def _do_generate_c_source(args):
     dbase = database.load_file(args.infile,
@@ -32,9 +33,11 @@ def generate_from_db(dbase, database_name, no_floating_point_numbers = False, ge
     fuzzer_filename_mk = database_name + '_fuzzer.mk'
     filename_proto = database_name + ".proto"
     filename_proto_interface = database_name + "_proto_interface.h"
+    file_name_watchdog = database_name + '_watchdog.h'
 
     proto = generate_proto(dbase, database_name)
     proto_interface = generate_proto_interface(dbase, database_name)
+    watchdog = generate_watchdog(dbase, database_name)
     
     header, source, fuzzer_source, fuzzer_makefile = generate(
         dbase,
@@ -69,6 +72,10 @@ def generate_from_db(dbase, database_name, no_floating_point_numbers = False, ge
     with open(path_proto_interface, 'w') as fout:
         fout.write(proto_interface)
 
+    path_watchdog = os.path.join(output_directory, file_name_watchdog)
+
+    with open(path_watchdog, 'w') as fout:
+        fout.write(watchdog)
 
     print(f'Successfully generated {path_h} and {path_c} and {path_proto} and {path_proto_interface}.')
 

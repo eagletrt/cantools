@@ -112,7 +112,7 @@ types_size = [1, 8, 16, 32, 64]
 def get_length(range, precision):
     return math.ceil((math.log2(range//precision)+1)/8)
 
-def get_signals(name, signal, offset: int, types):
+def get_signal(name, signal, offset: int, types):
     is_float = False
     choices = None
     precision = 1
@@ -182,8 +182,11 @@ def load_string(string: str, strict: bool = True,
     msgs = []
     reserved_ids = get_reserved_ids(db, messages)
     ids = generate_ids(db, reserved_ids)
-    comment = ''
     for message in db['messages']:
+        comment = ''
+        cycle_time = None
+        if 'interval' in message:
+            cycle_time = message['interval']
         if 'description' in message:
             comment = message['description']
         for sending in message['sending']:
@@ -197,7 +200,7 @@ def load_string(string: str, strict: bool = True,
             signals = []
             offset = 0
             for signal in message['contents']:
-                offset, s = get_signals(signal, message['contents'][signal], offset, db['types'])
+                offset, s = get_signal(signal, message['contents'][signal], offset, db['types'])
                 signals += s
-        msgs.append(Message(id, message['name'], offset, signals, comment=comment))
+        msgs.append(Message(id, message['name'], offset, signals, comment=comment, cycle_time=cycle_time))
     return InternalDatabase(msgs, list(nodes), [], "1")
