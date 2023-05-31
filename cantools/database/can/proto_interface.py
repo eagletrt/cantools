@@ -295,7 +295,7 @@ DESERIALIZE_SIGNAL = '''\t\t(*net_signals)["{name_m}"]["{signal_name}"].push(pac
 
 SERIALIZE_MESSAGE = '''
         case {id}: {{
-            {db_name}_message_{name_m}_converted_t* msg = ({db_name}_message_{name_m}_converted_t*)(&(*map)[index].message_conversion);
+            {db_name}_{name_m}_converted_t* msg = ({db_name}_{name_m}_converted_t*)(&(*map)[index].message_conversion);
             {db_name}::{name_m}* proto_msg = pack->add_{name}();
 {signals}
 #ifdef CANLIB_TIMESTAMP
