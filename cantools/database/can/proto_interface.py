@@ -295,7 +295,7 @@ DESERIALIZE_SIGNAL = '''\t\t(*net_signals)["{name_m}"]["{signal_name}"].push(pac
 
 SERIALIZE_MESSAGE = '''
         case {id}: {{
-            {db_name}_message_{name_m}_conversion_t* msg = ({db_name}_message_{name_m}_conversion_t*)(&(*map)[index].message_conversion);
+            {db_name}_message_{name_m}_converted_t* msg = ({db_name}_message_{name_m}_converted_t*)(&(*map)[index].message_conversion);
             {db_name}::{name_m}* proto_msg = pack->add_{name}();
 {signals}
 #ifdef CANLIB_TIMESTAMP
@@ -326,7 +326,7 @@ def _generate_serialize(database_name, messages):
         signals = ''
         for signal in msg.signals:
             signals += SERIALIZE_SIGNAL.format(name=signal.name.lower())
-        ret += SERIALIZE_MESSAGE.format(db_name=database_name, id=msg.frame_id, name=name, name_m=name_m, signals=signals)
+        ret += SERIALIZE_MESSAGE.format(db_name=database_name, id=msg.frame_id, name=name, name_m=name_m.lower(), signals=signals)
     return ret
 
 def generate_proto_interface(database, database_name):
