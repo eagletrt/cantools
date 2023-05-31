@@ -9,6 +9,9 @@ from ..database.can.proto import generate_proto
 from ..database.can.proto_interface import generate_proto_interface
 from ..database.can.watchdog import generate_watchdog
 
+LIBPATH = '/lib/{network}/'
+PROTOPATH = '/proto/{network}/'
+
 def _do_generate_c_source(args):
     dbase = database.load_file(args.infile,
                                encoding=args.encoding,
@@ -27,13 +30,13 @@ def _do_generate_c_source(args):
 def generate_from_db(dbase, database_name, no_floating_point_numbers = False, generate_fuzzer = False, bit_fields=False,
                      use_float=True, node=None, output_directory='.'):
 
-    filename_h = database_name + '.h'
-    filename_c = database_name + '.c'
-    fuzzer_filename_c = database_name + '_fuzzer.c'
-    fuzzer_filename_mk = database_name + '_fuzzer.mk'
-    filename_proto = database_name + ".proto"
-    filename_proto_interface = database_name + "_proto_interface.h"
-    file_name_watchdog = database_name + '_watchdog.h'
+    filename_h = 'network.h'
+    filename_c = 'network.c'
+    fuzzer_filename_c = 'network_fuzzer.c'
+    fuzzer_filename_mk = 'network_fuzzer.mk'
+    filename_proto = "network.proto"
+    filename_proto_interface = "network_proto_interface.h"
+    file_name_watchdog = 'network_watchdog.h'
 
     proto = generate_proto(dbase, database_name)
     proto_interface = generate_proto_interface(dbase, database_name)
@@ -50,29 +53,33 @@ def generate_from_db(dbase, database_name, no_floating_point_numbers = False, ge
         use_float,
         node)
 
-    os.makedirs(output_directory, exist_ok=True)
+    libpath = LIBPATH.format(network=database_name)
+    protopath = PROTOPATH.format(network=database_name)
+
+    os.makedirs(output_directory+libpath, exist_ok=True)
+    os.makedirs(output_directory+protopath, exist_ok=True)
     
-    path_h = os.path.join(output_directory, filename_h)
+    path_h = os.path.join(output_directory+libpath, filename_h)
     
     with open(path_h, 'w') as fout:
         fout.write(header)
 
-    path_c = os.path.join(output_directory, filename_c)
+    path_c = os.path.join(output_directory+libpath, filename_c)
 
     with open(path_c, 'w') as fout:
         fout.write(source)
 
-    path_proto = os.path.join(output_directory, filename_proto)
+    path_proto = os.path.join(output_directory+protopath, filename_proto)
 
     with open(path_proto, 'w') as fout:
         fout.write(proto)
 
-    path_proto_interface = os.path.join(output_directory, filename_proto_interface)
+    path_proto_interface = os.path.join(output_directory+protopath, filename_proto_interface)
 
     with open(path_proto_interface, 'w') as fout:
         fout.write(proto_interface)
 
-    path_watchdog = os.path.join(output_directory, file_name_watchdog)
+    path_watchdog = os.path.join(output_directory+libpath, file_name_watchdog)
 
     with open(path_watchdog, 'w') as fout:
         fout.write(watchdog)

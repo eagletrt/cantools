@@ -554,5 +554,5 @@ class Database:
 
         return '\n'.join(lines)
 
-    def generate_c_source(self, name):
-        generate_from_db(self, name)
+    def generate_c_source(self, name, output_directory='.'):
+        generate_from_db(self, name, output_directory=output_directory)

@@ -314,7 +314,7 @@ def _generate_deserialize(database_name, messages):
         name_m = name.upper()
         signals = ''
         for signal in msg.signals:
-            signals += DESERIALIZE_SIGNAL.format(name_m=name_m, name=name, signal_name=signal.name)
+            signals += DESERIALIZE_SIGNAL.format(name_m=name_m, name=name, signal_name=signal.name.lower())
         ret += DESERIALIZE_MESSAGE.format(name=name, name_m=name_m, signals=signals)
     return ret
 
@@ -325,7 +325,7 @@ def _generate_serialize(database_name, messages):
         name_m = name.upper()
         signals = ''
         for signal in msg.signals:
-            signals += SERIALIZE_SIGNAL.format(name=signal.name)
+            signals += SERIALIZE_SIGNAL.format(name=signal.name.lower())
         ret += SERIALIZE_MESSAGE.format(db_name=database_name, id=msg.frame_id, name=name, name_m=name_m, signals=signals)
     return ret
 
