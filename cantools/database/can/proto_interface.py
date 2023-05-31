@@ -296,7 +296,7 @@ DESERIALIZE_SIGNAL = '''\t\t(*net_signals)["{name_m}"]["{signal_name}"].push(pac
 SERIALIZE_MESSAGE = '''
         case {id}: {{
             {db_name}_{name_m}_converted_t* msg = ({db_name}_{name_m}_converted_t*)(&(*map)[index].message_conversion);
-            {db_name}::{name_m}* proto_msg = pack->add_{name}();
+            {db_name}::{name_m_U}* proto_msg = pack->add_{name}();
 {signals}
 #ifdef CANLIB_TIMESTAMP
             proto_msg->set__inner_timestamp(msg->_timestamp);
@@ -305,6 +305,8 @@ SERIALIZE_MESSAGE = '''
         }}
 '''
 SERIALIZE_SIGNAL = '''\t\t\tproto_msg->set_{name}(msg->{name});
+'''
+SERIALIZE_SIGNAL_TYPE = '''\t\t\tproto_msg->set_{name}(({type})msg->{name});
 '''
 
 def _generate_deserialize(database_name, messages):
@@ -325,8 +327,11 @@ def _generate_serialize(database_name, messages):
         name_m = name.upper()
         signals = ''
         for signal in msg.signals:
-            signals += SERIALIZE_SIGNAL.format(name=signal.name.lower())
-        ret += SERIALIZE_MESSAGE.format(db_name=database_name, id=msg.frame_id, name=name, name_m=name_m.lower(), signals=signals)
+            if signal.choices is not None:
+              signals += SERIALIZE_SIGNAL_TYPE.format(name=signal.name.lower(), type=f'{database_name}::{database_name}_{name}_{signal.name.lower()}')
+            else:
+              signals += SERIALIZE_SIGNAL.format(name=signal.name.lower())
+        ret += SERIALIZE_MESSAGE.format(db_name=database_name, id=msg.frame_id, name=name, name_m=name, signals=signals, name_m_U=name_m)
     return ret
 
 def generate_proto_interface(database, database_name):

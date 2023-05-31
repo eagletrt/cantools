@@ -113,8 +113,8 @@ void {database_name}_devices_deserialize_from_id(
 #endif // CANLIB_TIMESTAMP
 );
 
-static int {database_name}_index_from_id(uint16_t id);
-static int {database_name}_id_from_index(int index);
+int {database_name}_index_from_id(uint16_t id);
+int {database_name}_id_from_index(int index);
 
 {structs}
 {declarations}
@@ -828,14 +828,14 @@ MESSAGE_FIELD_FILE_FROM_ID = '''    case {id}:
             return {database_name}_{message_name}_fields_file(buffer);
     '''
 
-ID_FROM_INDEX = '''static int {database_name}_id_from_index(int index){{
+ID_FROM_INDEX = '''int {database_name}_id_from_index(int index){{
     switch (index) {{
 {body}\
     }}
     return -1;
 }}
 '''
-INDEX_FROM_ID = '''static int {database_name}_index_from_id(uint16_t id) {{
+INDEX_FROM_ID = '''int {database_name}_index_from_id(uint16_t id) {{
     switch (id) {{
 {body}\
     }}
@@ -1083,6 +1083,7 @@ def _canonical(value):
 
 
 def camel_to_snake_case(value):
+    return value.lower()
     value = re.sub(r'(.)([A-Z][a-z]+)', r'\1_\2', value)
     value = re.sub(r'(_+)', '_', value)
     value = re.sub(r'([a-z0-9])([A-Z])', r'\1_\2', value).lower()
