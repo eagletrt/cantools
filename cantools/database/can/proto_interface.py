@@ -195,14 +195,14 @@ PROTO_INTERFACE = '''
 #include <unordered_map>
 #include <functional>
 
-#include "{db_name}.pb.h"
+#include "network.pb.h"
 
 #ifdef {db_name}_IMPLEMENTATION
 #undef {db_name}_IMPLEMENTATION
 #define __{db_name}_IMPLEMENTATION
 #endif
 
-#include "../../../lib/{db_name}/c/network.h"
+#include "../../lib/{db_name}/network.h"
 
 #ifdef __{db_name}_IMPLEMENTATION
 #undef __{db_name}_IMPLEMENTATION
@@ -295,7 +295,7 @@ DESERIALIZE_SIGNAL = '''\t\t(*net_signals)["{name_m}"]["{signal_name}"].push(pac
 
 SERIALIZE_MESSAGE = '''
         case {id}: {{
-            {db_name}_message_{name_m}_conversion* msg = ({db_name}_message_{name_m}_conversion*)(&(*map)[index].message_conversion);
+            {db_name}_message_{name_m}_conversion_t* msg = ({db_name}_message_{name_m}_conversion*)(&(*map)[index].message_conversion);
             {db_name}::{name_m}* proto_msg = pack->add_{name}();
 {signals}
 #ifdef CANLIB_TIMESTAMP

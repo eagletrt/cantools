@@ -93,3 +93,5 @@ some_dir/
 
 #test dbc
 /*.dbc
+test/
+test.py

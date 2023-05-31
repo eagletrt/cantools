@@ -50,7 +50,7 @@ HEADER_FMT = '''\
 #define {include_guard}
 
 #include <stdio.h>
-#include <cstdlib>
+#include <stdlib.h>
 
 #ifdef __cplusplus
 extern "C" {{
