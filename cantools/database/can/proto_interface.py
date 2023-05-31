@@ -195,7 +195,7 @@ PROTO_INTERFACE = '''
 #include <unordered_map>
 #include <functional>
 
-#include "network.pb.h"
+#include "{db_name}.pb.h"
 
 #ifdef {db_name}_IMPLEMENTATION
 #undef {db_name}_IMPLEMENTATION

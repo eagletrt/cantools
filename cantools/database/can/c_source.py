@@ -94,11 +94,15 @@ extern "C" {{
 
 #define {database_name}_MESSAGE_COUNT {msg_count}
 
+#ifndef CANLIB_DEVICES_STRUCT
+#define CANLIB_DEVICES_STRUCT
 typedef struct {{
     uint16_t id;
     void* message_raw;
     void* message_conversion;
 }} devices_t;
+#endif // CANLIB_DEVICES_STRUCT
+
 typedef devices_t {database_name}_devices[{database_name}_MESSAGE_COUNT];
 
 

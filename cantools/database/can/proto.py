@@ -5,7 +5,7 @@ from decimal import Decimal
 from ...version import __version__
 
 PROTO = '''syntax = "proto3";
-package primary;
+package {db_name};
 
 
 {enum_body}
@@ -76,4 +76,4 @@ def generate_proto(database, database_name):
     enums = _generate_enums(database_name, messages)
     msgs = _generate_messages(database_name, messages)
     pack = _generate_pack(database_name, messages)
-    return PROTO.format(enum_body=enums, messages_body=msgs, pack_body=pack)
+    return PROTO.format(db_name=database_name, enum_body=enums, messages_body=msgs, pack_body=pack)

@@ -34,9 +34,9 @@ def generate_from_db(dbase, database_name, no_floating_point_numbers = False, ge
     filename_c = 'network.c'
     fuzzer_filename_c = 'network_fuzzer.c'
     fuzzer_filename_mk = 'network_fuzzer.mk'
-    filename_proto = "network.proto"
-    filename_proto_interface = "network_proto_interface.h"
     file_name_watchdog = 'network_watchdog.h'
+    filename_proto = database_name + ".proto"
+    filename_proto_interface = database_name + "_proto_interface.h"
 
     proto = generate_proto(dbase, database_name)
     proto_interface = generate_proto_interface(dbase, database_name)
