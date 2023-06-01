@@ -34,7 +34,7 @@ def load_database_folder(args, path):
         dbs_names.append(camel_to_snake_case(os.path.basename(subfolder)))
         files = [f.path for f in os.scandir(subfolder) if f.is_file()]
         dbc_files = [f for f in files if f.endswith('.dbc')]
-        json_files = [f for f in files if f.endswith('.json')]
+        json_files = [f for f in files if f.endswith('.json') and "network" in f] # check if json and contains network
         if len(dbc_files) == 0 and len(json_files) == 0:
             raise argparse.ArgumentTypeError(f"{subfolder} does not contain a .dbc or .json file")
         # Load dbc files, then json files
