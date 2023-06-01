@@ -1,5 +1,6 @@
 import re
 import time
+from typing import List
 from decimal import Decimal
 
 from ...version import __version__
@@ -426,13 +427,18 @@ DEVICE_MESSAGE_NEW = '''\
     (*devices)[{database_name}_{message_name}_INDEX].message_raw = (void*) malloc(sizeof({database_name}_{message_name}_t));
     (*devices)[{database_name}_{message_name}_INDEX].message_conversion = NULL;
 '''
+DEVICE_MESSAGE_NEW_CONVERTED = '''\
+    (*devices)[{database_name}_{message_name}_INDEX].id = {id};
+    (*devices)[{database_name}_{message_name}_INDEX].message_raw = (void*) malloc(sizeof({database_name}_{message_name}_t));
+    (*devices)[{database_name}_{message_name}_INDEX].message_conversion = (void*) malloc(sizeof({database_name}_{message_name}_converted_t));
+'''
 DEVICE_MESSAGE_FREE = '''\
     free((*devices)[{database_name}_{message_name}_INDEX].message_raw);
 '''
 DEVICE_MESSAGE_DESERIALIZE = '''\
         case {id}: {{
             {database_name}_{message_name}_unpack(
-                ({database_name}_{message_name}_t*) &(*devices)[{database_name}_{message_name}_INDEX].message_raw,
+                ({database_name}_{message_name}_t*) (*devices)[{database_name}_{message_name}_INDEX].message_raw,
                 data,
                 {message_length}
                 #ifdef CANLIB_TIMESTAMP
@@ -753,10 +759,10 @@ SIGNAL_MEMBER_FMT_BOOL = '''\
     unsigned int {name}{length} : 1;\
 '''
 
-MESSAGE_DECLARATION_TO_STRING = '''int {database_name}_{message_name}_to_string({database_name}_{message_name}_converted_t *message, char *buffer);
+MESSAGE_DECLARATION_TO_STRING = '''int {database_name}_{message_name}_to_string({database_name}_{message_name}_t *message, char *buffer);
 '''
 
-MESSAGE_DEFINITION_TO_STRING = '''int {database_name}_{message_name}_to_string({database_name}_{message_name}_converted_t *message, char *buffer){{
+MESSAGE_DEFINITION_TO_STRING = '''int {database_name}_{message_name}_to_string({database_name}_{message_name}_t *message, char *buffer){{
     return sprintf(
         buffer,
         ""
@@ -765,9 +771,9 @@ MESSAGE_DEFINITION_TO_STRING = '''int {database_name}_{message_name}_to_string({
         #endif // CANLIB_TIMESTAMP
 '''
 
-DEFINITION_TO_STRING_FILE_NO_SIGNALS = '''int {database_name}_{message_name}_to_string({database_name}_{message_name}_converted_t *message, char *buffer){{return 0;}}
+DEFINITION_TO_STRING_FILE_NO_SIGNALS = '''int {database_name}_{message_name}_to_string({database_name}_{message_name}_t *message, char *buffer){{return 0;}}
 int {database_name}_{message_name}_fields(char *buffer) {{return 0;}}
-int {database_name}_{message_name}_to_string_file({database_name}_{message_name}_converted_t *message, FILE *buffer){{return 0;}}
+int {database_name}_{message_name}_to_string_file({database_name}_{message_name}_t *message, FILE *buffer){{return 0;}}
 int {database_name}_{message_name}_fields_file(FILE *buffer){{return 0;}}
 '''
 
@@ -793,10 +799,10 @@ SIGNAL_DEFINITION_FIELDS = '''    "{signal_name}"","
 
 #FILE
 
-MESSAGE_DECLARATION_TO_STRING_FILE = '''int {database_name}_{message_name}_to_string_file({database_name}_{message_name}_converted_t *message, FILE *buffer);
+MESSAGE_DECLARATION_TO_STRING_FILE = '''int {database_name}_{message_name}_to_string_file({database_name}_{message_name}_t *message, FILE *buffer);
 '''
 
-MESSAGE_DEFINITION_TO_STRING_FILE = '''int {database_name}_{message_name}_to_string_file({database_name}_{message_name}_converted_t *message, FILE *buffer){{
+MESSAGE_DEFINITION_TO_STRING_FILE = '''int {database_name}_{message_name}_to_string_file({database_name}_{message_name}_t *message, FILE *buffer){{
     return fprintf(
         buffer,
         ""
@@ -818,7 +824,7 @@ MESSAGE_DEFINITION_FIELDS_FILE = '''int {database_name}_{message_name}_fields_fi
 '''
 
 MESSAGE_STRING_FROM_ID = '''    case {id}:
-            return {database_name}_{message_name}_to_string(({database_name}_{message_name}_converted_t*) message,
+            return {database_name}_{message_name}_to_string(({database_name}_{message_name}_t*) message,
                                                 buffer);
     '''
 MESSAGE_FIELD_FROM_ID = '''    case {id}:
@@ -826,7 +832,7 @@ MESSAGE_FIELD_FROM_ID = '''    case {id}:
     '''
 
 MESSAGE_FILE_FROM_ID = '''    case {id}:
-            return {database_name}_{message_name}_to_string_file(({database_name}_{message_name}_converted_t*) message, buffer);
+            return {database_name}_{message_name}_to_string_file(({database_name}_{message_name}_t*) message, buffer);
     '''
 MESSAGE_FIELD_FILE_FROM_ID = '''    case {id}:
             return {database_name}_{message_name}_fields_file(buffer);
@@ -1068,6 +1074,11 @@ class Message:
         self._message = message
         self.snake_name = camel_to_snake_case(self.name)
         self.signals = [Signal(signal, self.snake_name, database_name)for signal in message.signals]
+        self.has_conversions = False
+        for sig in self.signals:
+            if sig.is_float_conversion:
+                self.has_conversions = True
+                break
 
     def __getattr__(self, name):
         return getattr(self._message, name)
@@ -1836,7 +1847,7 @@ def _get_raw_to_conversion_head(database_name, message):
                                                                             signals = "".join(signals))
     return message_raw_to_conversion[:-2] + "\n)"
 
-def _generate_declarations(database_name, messages, floating_point_numbers, use_float, node_name):
+def _generate_declarations(database_name, messages: List[Message], floating_point_numbers, use_float, node_name):
     declarations = []
 
     for message in messages:
@@ -1887,10 +1898,14 @@ def _generate_declarations(database_name, messages, floating_point_numbers, use_
                                                                     struct_type_in=f"{database_name}_{message.snake_name}_t",
                                                                     struct_type_out=f"const {database_name}_{message.snake_name}_converted_t"))
 
+        msg_name = message.snake_name
+        if message.has_conversions:
+            msg_name += "_converted"
+
         declarations.append(MESSAGE_DECLARATION_TO_STRING.format(database_name=database_name,
-                                                                message_name=message.snake_name))
+                                                                message_name=msg_name))
         declarations.append(MESSAGE_DECLARATION_TO_STRING_FILE.format(database_name=database_name,
-                                                                message_name=message.snake_name))
+                                                                message_name=msg_name))
 
         declarations.append(MESSAGE_DECLARATION_FIELDS.format(database_name=database_name,
                                                         message_name=message.snake_name))
@@ -1921,7 +1936,7 @@ def _generate_declarations(database_name, messages, floating_point_numbers, use_
     return '\n'.join(declarations)
 
 
-def _generate_definitions(database_name, messages, floating_point_numbers, use_float, node_name):
+def _generate_definitions(database_name, messages: List[Message], floating_point_numbers, use_float, node_name):
     definitions = []
     pack_helper_kinds = set()
     unpack_helper_kinds = set()
@@ -1961,33 +1976,41 @@ def _generate_definitions(database_name, messages, floating_point_numbers, use_f
         id_from_index += '\t\tcase {}: return {};\n'.format(f'{database_name}_{message.snake_name}_INDEX',
                                                     message._message._frame_id)
 
-        devices_new += DEVICE_MESSAGE_NEW.format(database_name=database_name,
-                                                message_name=message.snake_name,
-                                                id=message._message._frame_id)
+        if message.has_conversions:
+            devices_new += DEVICE_MESSAGE_NEW_CONVERTED.format(database_name=database_name,
+                                                                message_name=message.snake_name,
+                                                                id=message._message._frame_id)
+        else:
+            devices_new += DEVICE_MESSAGE_NEW.format(database_name=database_name,
+                                                    message_name=message.snake_name,
+                                                    id=message._message._frame_id)
         devices_free += DEVICE_MESSAGE_FREE.format(database_name=database_name,
                                                 message_name=message.snake_name)
         devices_deserialize += DEVICE_MESSAGE_DESERIALIZE.format(id=message._message._frame_id,
                                                                 message_name=message.snake_name,
                                                                 database_name=database_name,
                                                                 message_length=message.length)
-
+        msg_name = message.snake_name
+        if message.has_conversions:
+            msg_name += "_converted"
+        
         to_string_from_id += MESSAGE_STRING_FROM_ID.format(id=message._message._frame_id,
                                                             database_name=database_name,
-                                                            message_name=message.snake_name)
+                                                            message_name=msg_name)
         fields_from_id += MESSAGE_FIELD_FROM_ID.format(id=message._message._frame_id,
                                                             database_name=database_name,
                                                             message_name=message.snake_name)
         to_string_file_from_id += MESSAGE_FILE_FROM_ID.format(id=message._message._frame_id,
                                                             database_name=database_name,
-                                                            message_name=message.snake_name)
+                                                            message_name=msg_name)
         fields_file_from_id += MESSAGE_FIELD_FILE_FROM_ID.format(id=message._message._frame_id,
                                                             database_name=database_name,
                                                             message_name=message.snake_name)
                                                             
         message_to_string = MESSAGE_DEFINITION_TO_STRING.format(database_name=database_name,
-                                                                message_name=message.snake_name)
+                                                                message_name=msg_name)
         message_to_string_file = MESSAGE_DEFINITION_TO_STRING_FILE.format(database_name=database_name,
-                                                                message_name=message.snake_name)
+                                                                message_name=msg_name)
         signals_specifiers = ""
         signals_to_string = '''
 #ifdef CANLIB_TIMESTAMP
@@ -2099,7 +2122,7 @@ def _generate_definitions(database_name, messages, floating_point_numbers, use_f
             signal_definitions.append(message_fields_file + message_fields[:-4] + ");\n}\n")
         else:
             signal_definitions.append(DEFINITION_TO_STRING_FILE_NO_SIGNALS.format(database_name=database_name,
-                                                                message_name=message.snake_name))
+                                                                message_name=msg_name))
         if message.length > 0:
             pack_variables, pack_body = _format_pack_code(message,
                                                           pack_helper_kinds)
