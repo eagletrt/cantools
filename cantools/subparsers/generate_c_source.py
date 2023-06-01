@@ -32,9 +32,9 @@ def load_database_folder(args, path):
     dbs_names = []
     for subfolder in subfolders:
         dbs_names.append(camel_to_snake_case(os.path.basename(subfolder)))
-        files = [f.path for f in os.scandir(subfolder) if f.is_file()]
-        dbc_files = [f for f in files if f.endswith('.dbc')]
-        json_files = [f for f in files if f.endswith('.json') and "network" in f] # check if json and contains network
+        files = [(f.name, f.path) for f in os.scandir(subfolder) if f.is_file()]
+        dbc_files = [f for f in files if f[1].endswith('.dbc')]
+        json_files = [f for f in files if f[1].endswith('.json') and "network" in f[0]] # check if json and contains network
         if len(dbc_files) == 0 and len(json_files) == 0:
             raise argparse.ArgumentTypeError(f"{subfolder} does not contain a .dbc or .json file")
         # Load dbc files, then json files
@@ -46,13 +46,13 @@ def load_database_folder(args, path):
                                         strict=not args.no_strict)
             else:
                 db.add_dbc_file(dbc_file)
-        for json_file in json_files:
+        for json_path, json_name in json_files:
             if db is None:
-                db = database.load_file(json_file, encoding=args.encoding,
+                db = database.load_file(json_path, encoding=args.encoding,
                                         prune_choices=args.prune,
                                         strict=not args.no_strict)
             else:
-                db.add_json_file(json_file)
+                db.add_json_file(json_path)
         dbs.append(db)
     return dbs, dbs_names
 
