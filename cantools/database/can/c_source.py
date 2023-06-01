@@ -791,6 +791,15 @@ SIGNAL_DEFINITION_SPECIFIER = '''    "{specifier}"","
 SIGNAL_DEFINITION_TO_STRING = '''    message->{signal_name},
 '''
 
+ENUM_TO_STRING = '''int {database_name}_{message_name}_{signal_name}_to_string(int value, char *buffer){
+    switch(value)
+    {
+{body}
+    }
+    return 0;
+}'''
+CHOICE_TO_STRING = '''\t\tcase {case}: return sprintf(buffer, "{choice}");\n'''
+
 MESSAGE_DECLARATION_FIELDS = '''int {database_name}_{message_name}_fields(char *buffer);
 '''
 
@@ -2072,12 +2081,18 @@ def _generate_definitions(database_name, messages: List[Message], floating_point
                                                                     message_name=message.snake_name,
                                                                     struct_type_in=f"{database_name}_{message.snake_name}_t",
                                                                     struct_type_out=f"const {database_name}_{message.snake_name}_converted_t")
-
+        enum_to_string = ''
         for signal, (encode, decode), check in zip(message.signals,
                                                    _generate_encode_decode(message, use_float),
                                                    _generate_is_in_range(message)):
             if _is_receiver(signal, node_name):
                 is_receiver = True
+            
+            if signal.is_enum:
+                body = ''
+                for choice in signal.unique_choices:
+                    body += CHOICE_TO_STRING.format(choice, signal.unique_choices[choice])
+                enum_to_string += ENUM_TO_STRING.format(database_name=database_name, message_name=message.snake_name, signal_name=signal.snake_name, body=body)
             
             if check == 'true':
                 unused = '    (void)value;\n\n'

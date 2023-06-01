@@ -533,6 +533,10 @@ DESERIALIZE_MESSAGE = '''
 '''
 DESERIALIZE_SIGNAL = '''\t\t(*net_signals)["{name_m}"]["{signal_name}"].push(pack->{name}(i).{signal_name}());
 '''
+DESERIALIZE_SIGNAL_ENUM = '''\t\t(*net_enums)["{name_m}"]["{signal_name}"].push(pack->{name}(i).{signal_name}())
+\t\t{database_name}_{name_m}_{signal_name}_to_string(pack->{name}(i).{signal_name}(), buffer);
+\t\t(*net_strings)["{name_m}"]["{signal_name}"].push(buffer);
+'''
 
 SERIALIZE_MESSAGE = '''
         case {id}: {{
@@ -557,7 +561,10 @@ def _generate_deserialize(database_name, messages):
         name_m = name.upper()
         signals = ''
         for signal in msg.signals:
-            signals += DESERIALIZE_SIGNAL.format(name_m=name_m, name=name, signal_name=signal.name.lower())
+            if signal.is_enum:
+                signals+=DESERIALIZE_SIGNAL_ENUM.format(database_name=database_name, name_m=name_m, name=name, signal_name=signal.name.lower())
+            else:
+                signals += DESERIALIZE_SIGNAL.format(name_m=name_m, name=name, signal_name=signal.name.lower())
         ret += DESERIALIZE_MESSAGE.format(name=name, name_m=name_m, signals=signals)
     return ret
 
