@@ -5,14 +5,14 @@ from decimal import Decimal
 
 from ...version import __version__
 
-type_to_specifier = {"uint8_t": "%u",
-                    "uint16_t": "%u",
-                    "uint32_t": "%u",
-                    "uint64_t": "%u",
-                    "int8_t": "%d",
-                    "int16_t": "%d",
-                    "int32_t": "%d",
-                    "int64_t": "%d",
+type_to_specifier = {"uint8_t": '%" PRIu8 " ',
+                    "uint16_t": '%" PRIu16 "',
+                    "uint32_t": '%" PRIu32 "',
+                    "uint64_t": '%" PRIu64 "',
+                    "int8_t":   '%" PRIi8 " ',
+                    "int16_t":  '%" PRIi16 "',
+                    "int32_t":  '%" PRIi32 "',
+                    "int64_t":  '%" PRIi64 "',
                     "float": "%f",
                     "double": "%f"}
 
@@ -52,6 +52,7 @@ HEADER_FMT = '''\
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <inttypes.h>
 
 #ifdef __cplusplus
 extern "C" {{
