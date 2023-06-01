@@ -46,7 +46,7 @@ def load_database_folder(args, path):
                                         strict=not args.no_strict)
             else:
                 db.add_dbc_file(dbc_file)
-        for json_path, json_name in json_files:
+        for json_name, json_path in json_files:
             if db is None:
                 db = database.load_file(json_path, encoding=args.encoding,
                                         prune_choices=args.prune,
