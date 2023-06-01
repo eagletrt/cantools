@@ -533,8 +533,8 @@ DESERIALIZE_MESSAGE = '''
 '''
 DESERIALIZE_SIGNAL = '''\t\t(*net_signals)["{name_m}"]["{signal_name}"].push(pack->{name}(i).{signal_name}());
 '''
-DESERIALIZE_SIGNAL_ENUM = '''\t\t(*net_enums)["{name_m}"]["{signal_name}"].push(pack->{name}(i).{signal_name}())
-\t\t{database_name}_{name_m}_{signal_name}_to_string(pack->{name}(i).{signal_name}(), buffer);
+DESERIALIZE_SIGNAL_ENUM = '''\t\t(*net_enums)["{name_m}"]["{signal_name}"].push(pack->{name}(i).{signal_name}());
+\t\t{database_name}_{name}_{signal_name}_enum_to_string(({database_name}_{name}_{signal_name})pack->{name}(i).{signal_name}(), buffer);
 \t\t(*net_strings)["{name_m}"]["{signal_name}"].push(buffer);
 '''
 

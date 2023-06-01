@@ -791,13 +791,15 @@ SIGNAL_DEFINITION_SPECIFIER = '''    "{specifier}"","
 SIGNAL_DEFINITION_TO_STRING = '''    message->{signal_name},
 '''
 
-ENUM_TO_STRING = '''int {database_name}_{message_name}_{signal_name}_to_string(int value, char *buffer){
+ENUM_TO_STRING = '''int {database_name}_{message_name}_{signal_name}_enum_to_string({database_name}_{message_name}_{signal_name} value, char *buffer){{
     switch(value)
-    {
+    {{
 {body}
-    }
+    }}
     return 0;
-}'''
+}}'''
+ENUM_TO_STRING_DECLARATION = '''int {database_name}_{message_name}_{signal_name}_enum_to_string({database_name}_{message_name}_{signal_name} value, char *buffer);\n'''
+
 CHOICE_TO_STRING = '''\t\tcase {case}: return sprintf(buffer, "{choice}");\n'''
 
 MESSAGE_DECLARATION_FIELDS = '''int {database_name}_{message_name}_fields(char *buffer);
@@ -1880,6 +1882,8 @@ def _generate_declarations(database_name, messages: List[Message], floating_poin
         signal_declarations = []
         is_sender = _is_sender(message, node_name)
         is_receiver = node_name is None
+
+        enum_to_string = ""
         for signal in message.signals:
             if _is_receiver(signal, node_name):
                 is_receiver = True
@@ -1909,6 +1913,13 @@ def _generate_declarations(database_name, messages: List[Message], floating_poin
                     type_name=signal.type_name)
                 
                 signal_declarations.append(signal_declaration)
+
+            if signal.is_enum:
+                enum_to_string += ENUM_TO_STRING_DECLARATION.format(
+                    database_name = database_name,
+                    message_name = message.snake_name,
+                    signal_name = signal.snake_name
+                )
         declaration = ""
 
         declarations.append(_get_raw_to_conversion_head(database_name, message) + ";\n")
@@ -1927,6 +1938,8 @@ def _generate_declarations(database_name, messages: List[Message], floating_poin
         msg_name = message.snake_name
         if message.has_conversions:
             msg_name += "_converted"
+
+        declarations.append(enum_to_string)
 
         declarations.append(MESSAGE_DECLARATION_TO_STRING.format(database_name=database_name,
                                                                 message_name=msg_name))
@@ -2091,7 +2104,7 @@ def _generate_definitions(database_name, messages: List[Message], floating_point
             if signal.is_enum:
                 body = ''
                 for choice in signal.unique_choices:
-                    body += CHOICE_TO_STRING.format(choice, signal.unique_choices[choice])
+                    body += CHOICE_TO_STRING.format(case=choice, choice=signal.unique_choices[choice])
                 enum_to_string += ENUM_TO_STRING.format(database_name=database_name, message_name=message.snake_name, signal_name=signal.snake_name, body=body)
             
             if check == 'true':
@@ -2210,6 +2223,8 @@ def _generate_definitions(database_name, messages: List[Message], floating_point
 
         if definition:
             definitions.append(definition)
+
+        definitions.append(enum_to_string)
         
     definitions.append(MSG_NAME_FROM_ID.format(database_name=database_name, body=msg_name_from_id))
     definitions.append(INDEX_FROM_ID.format(database_name=database_name, body=index_from_id))
