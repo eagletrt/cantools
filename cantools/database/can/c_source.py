@@ -5,11 +5,11 @@ from decimal import Decimal
 
 from ...version import __version__
 
-type_to_specifier = {"uint8_t": '%" PRIu8 " ',
+type_to_specifier = {"uint8_t": '%" PRIu8  "',
                     "uint16_t": '%" PRIu16 "',
                     "uint32_t": '%" PRIu32 "',
                     "uint64_t": '%" PRIu64 "',
-                    "int8_t":   '%" PRIi8 " ',
+                    "int8_t":   '%" PRIi8  "',
                     "int16_t":  '%" PRIi16 "',
                     "int32_t":  '%" PRIi32 "',
                     "int64_t":  '%" PRIi64 "',
@@ -62,15 +62,15 @@ extern "C" {{
 #include <stdbool.h>
 #include <stddef.h>
 
-#ifndef INVLIB_PARKING
+#ifndef CANLIB_PARKING
 /* We know it's PACKING but PARKING sounds a bit better ;) */
 #if defined(__MINGW32__)
-#define INVLIB_PARKING                                                         \
+#define CANLIB_PARKING                                                         \
   __attribute__((__gcc_struct__, __packed__)) // , __aligned__(1)))
 #else
-#define INVLIB_PARKING __attribute__((__packed__)) // , __aligned__(1)))
+#define CANLIB_PARKING __attribute__((__packed__)) // , __aligned__(1)))
 #endif                                             // defined(__MINGW32__)
-#endif                                             // INVLIB_PARKING
+#endif                                             // CANLIB_PARKING
 
 #ifndef EINVAL
 #    define EINVAL 22
@@ -387,7 +387,7 @@ STRUCT_FMT = '''\
 {comment}\
  * All signal values are as on the CAN bus.
  */
-typedef struct INVLIB_PARKING {{
+typedef struct CANLIB_PARKING {{
 {members}
 
 #ifdef CANLIB_TIMESTAMP
@@ -447,8 +447,15 @@ DEVICE_MESSAGE_DESERIALIZE = '''\
                 , timestamp
                 #endif
             );
+            {conversion_component}
             return;
         }}
+'''
+DEVICE_MESSAGE_DESERIALIZE_CONVERSION_COMPONENT = '''
+            {database_name}_{message_name}_raw_to_conversion_struct(
+                (*devices)[{database_name}_{message_name}_INDEX].message_conversion,
+                (*devices)[{database_name}_{message_name}_INDEX].message_raw
+            );
 '''
 
 DECLARATION_PACK_FMT = '''\
@@ -2000,10 +2007,18 @@ def _generate_definitions(database_name, messages: List[Message], floating_point
                                                     id=message._message._frame_id)
         devices_free += DEVICE_MESSAGE_FREE.format(database_name=database_name,
                                                 message_name=message.snake_name)
+        
+        conversion_comp = ""
+        if message.has_conversions:
+            conversion_comp = DEVICE_MESSAGE_DESERIALIZE_CONVERSION_COMPONENT.format(id=message._message._frame_id,
+                                                                    message_name=message.snake_name,
+                                                                    database_name=database_name,
+                                                                    message_length=message.length)
         devices_deserialize += DEVICE_MESSAGE_DESERIALIZE.format(id=message._message._frame_id,
                                                                 message_name=message.snake_name,
                                                                 database_name=database_name,
-                                                                message_length=message.length)
+                                                                message_length=message.length,
+                                                                conversion_component=conversion_comp)
         msg_name = message.snake_name
         if message.has_conversions:
             msg_name += "_converted"

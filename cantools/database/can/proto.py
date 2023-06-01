@@ -21,7 +21,7 @@ def is_float_conversion(signal):
 def type_name(database_name, message_name, signal):
     if signal.choices is not None:
         return f"{database_name}_{message_name}_{signal.name}".lower()
-    if signal.is_float:
+    if is_float_conversion(signal):
         if signal.length == 32:
             type_name = 'float'
         else:
