@@ -12,19 +12,77 @@ from ..database.can.watchdog import generate_watchdog
 LIBPATH = '/lib/{network}/'
 PROTOPATH = '/proto/{network}/'
 
+def load_database_folder(args, path):
+    # Check if path is a folder
+    if not os.path.isdir(path):
+        raise argparse.ArgumentTypeError(f"{path} is not a folder")
+    # Check if folder contains multiple subfolders (one for each network) but
+    # with only no subsubfolder
+    subfolders = [f.path for f in os.scandir(path) if f.is_dir()]
+    if len(subfolders) == 0:
+        raise argparse.ArgumentTypeError(f"{path} does not contain any subfolder")
+    for subfolder in subfolders:
+        subsubfolders = [f.path for f in os.scandir(subfolder) if f.is_dir()]
+        if len(subsubfolders) != 0:
+            raise argparse.ArgumentTypeError(f"{subfolder} contains subfolders")
+
+
+    # Check for every subfolder if contains a .dbc file or .json file
+    dbs = []
+    dbs_names = []
+    for subfolder in subfolders:
+        dbs_names.append(camel_to_snake_case(os.path.basename(subfolder)))
+        files = [f.path for f in os.scandir(subfolder) if f.is_file()]
+        dbc_files = [f for f in files if f.endswith('.dbc')]
+        json_files = [f for f in files if f.endswith('.json')]
+        if len(dbc_files) == 0 and len(json_files) == 0:
+            raise argparse.ArgumentTypeError(f"{subfolder} does not contain a .dbc or .json file")
+        # Load dbc files, then json files
+        db = None
+        for dbc_file in dbc_files:
+            if db is None:
+                db = database.load_file(dbc_file, encoding=args.encoding,
+                                        prune_choices=args.prune,
+                                        strict=not args.no_strict)
+            else:
+                db.add_dbc_file(dbc_file)
+        for json_file in json_files:
+            if db is None:
+                db = database.load_file(json_file, encoding=args.encoding,
+                                        prune_choices=args.prune,
+                                        strict=not args.no_strict)
+            else:
+                db.add_json_file(json_file)
+        dbs.append(db)
+    return dbs, dbs_names
+
 def _do_generate_c_source(args):
-    dbase = database.load_file(args.infile,
-                               encoding=args.encoding,
-                               prune_choices=args.prune,
-                               strict=not args.no_strict)
-    if args.database_name is None:
-        basename = os.path.basename(args.infile)
-        database_name = os.path.splitext(basename)[0]
-        database_name = camel_to_snake_case(database_name)
+    dbases = []
+    dbases_names = []
+    if args.infile is None:
+        dbase, dbase_name = load_database_folder(args, args.infolder)
+        dbases.append(dbase)
+        dbases_names.append(dbase_name)
     else:
-        database_name = args.database_name
-    generate_from_db(dbase, database_name, args.no_floating_point_numbers, args.generate_fuzzer, args.bit_fields,
-                     args.use_float, args.node, args.output_directory)
+        dbases.append(database.load_file(args.infile,
+                                encoding=args.encoding,
+                                prune_choices=args.prune,
+                                strict=not args.no_strict))
+        if args.database_name is None or len(dbases) > 1:
+            basename = os.path.basename(args.infile)
+            database_name = os.path.splitext(basename)[0]
+            database_name = camel_to_snake_case(database_name)
+        else:
+            database_name = args.database_name
+        dbases_names.append(database_name)
+
+    # flatten list of lists
+    dbases = [item for sublist in dbases for item in sublist]
+    dbases_names = [item for sublist in dbases_names for item in sublist]
+    
+    for dbase, dbase_name in zip(dbases, dbases_names):
+        generate_from_db(dbase, dbase_name, args.no_floating_point_numbers, args.generate_fuzzer, args.bit_fields,
+                        args.use_float, args.node, args.output_directory)
 
 
 def generate_from_db(dbase, database_name, no_floating_point_numbers = False, generate_fuzzer = False, bit_fields=False,
@@ -149,9 +207,15 @@ def add_subparser(subparsers):
         default=False,
         help='Use float instead of double for floating point generation.')
     generate_c_source_parser.add_argument(
-        'infile',
-        help='Input database file.')
-    generate_c_source_parser.add_argument(
         '--node',
         help='Generate pack/unpack functions only for messages sent/received by the node.')
+    
+    in_group = generate_c_source_parser.add_mutually_exclusive_group(required=True)
+    in_group.add_argument(
+        '--infile',
+        help='Input database file.')
+    in_group.add_argument(
+        '--infolder',
+        help='Input database folder.')
+
     generate_c_source_parser.set_defaults(func=_do_generate_c_source)

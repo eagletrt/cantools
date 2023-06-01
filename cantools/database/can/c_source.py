@@ -796,6 +796,7 @@ ENUM_TO_STRING = '''int {database_name}_{message_name}_{signal_name}_enum_to_str
     {{
 {body}
     }}
+    sprintf(buffer, "_UNKNOWN_");
     return 0;
 }}'''
 ENUM_TO_STRING_DECLARATION = '''int {database_name}_{message_name}_{signal_name}_enum_to_string({database_name}_{message_name}_{signal_name} value, char *buffer);\n'''
