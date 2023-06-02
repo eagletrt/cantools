@@ -88,7 +88,6 @@ def generate_messages_id(topic_messages, topic: int, blacklist=set()):
         else:
             global_id = generator.next(message_priority)
             message_ids[message_name] = {message_name: global_id}
-
     return message_ids
 
 
@@ -161,10 +160,11 @@ def get_signal(name, signal, offset: int, types):
         maximum, minimum = minimum, maximum
     if is_float:
         precision = abs(maximum-minimum) / ((1<<type)-1)
-    for i in types_size:
-        if i >= type:
-            type = i
-            break
+    if is_float:
+        for i in types_size:
+            if i > type:
+                type = i
+                break
     
     
     return (offset+type, [Signal(name, offset, type, is_float=False, minimum=minimum, maximum=maximum, offset=(minimum), scale=precision, is_signed=is_signed,
@@ -201,9 +201,11 @@ def load_string(string: str, strict: bool = True,
         if 'description' in message:
             comment = message['description']
         for sending in message['sending']:
+            msg_name = message['name']
             if 'topic' in message:
                 if len(message['sending']) > 1:
                     id = ids[message['topic']]['messages'][message['name']][f"{message['name']}_{sending}"]
+                    msg_name = f"{message['name']}_{sending}"
                 else:
                     id = ids[message['topic']]['messages'][message['name']][message['name']]
             else:
@@ -213,5 +215,5 @@ def load_string(string: str, strict: bool = True,
             for signal in message['contents']:
                 offset, s = get_signal(signal, message['contents'][signal], offset, db['types'])
                 signals += s
-        msgs.append(Message(id, message['name'], offset, signals, comment=comment, cycle_time=cycle_time))
+            msgs.append(Message(id, msg_name, offset, signals, comment=comment, cycle_time=cycle_time))
     return InternalDatabase(msgs, list(nodes), [], "1")
