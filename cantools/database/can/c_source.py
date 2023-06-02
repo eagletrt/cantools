@@ -458,6 +458,23 @@ DEVICE_MESSAGE_DESERIALIZE_CONVERSION_COMPONENT = '''
             );
 '''
 
+NET_ID_IS_MESSAGE_DECLARATION = '''\
+bool {database_name}_id_is_message(uint16_t id);
+'''
+NET_ID_IS_MESSAGE_DEFINITION = '''\
+bool {database_name}_id_is_message(uint16_t id){{
+    switch(id){{
+{net_id_is_message_body}        return true;
+        break;
+    default:
+        return false;
+    }}
+}}
+'''
+NET_ID_IS_MESSAGE_BODY = '''\
+        case {db_name}_{msg_name}_FRAME_ID:
+'''
+
 DECLARATION_PACK_FMT = '''\
 /**
  * Pack message {database_message_name}.
@@ -1952,7 +1969,6 @@ def _generate_declarations(database_name, messages: List[Message], floating_poin
         declarations.append(MESSAGE_DECLARATION_FIELDS_FILE.format(database_name=database_name,
                                                         message_name=message.snake_name))
 
-
         if is_sender:
             declaration += DECLARATION_PACK_FMT.format(database_name=database_name,
                                                        database_message_name=message.name,
@@ -1968,10 +1984,12 @@ def _generate_declarations(database_name, messages: List[Message], floating_poin
         if declaration:
             declarations.append(declaration)
 
+    declarations.append(NET_ID_IS_MESSAGE_DECLARATION.format(database_name=database_name))
     declarations.append(f'int {database_name}_to_string_from_id(uint16_t message_id, void* message, char* buffer);')
     declarations.append(f'int {database_name}_fields_from_id(uint16_t message_id, char* buffer);')
     declarations.append(f'int {database_name}_to_string_file_from_id(uint16_t message_id, void* message, FILE* buffer);')
     declarations.append(f'int {database_name}_fields_file_from_id(uint16_t message_id, FILE* buffer);')
+
 
     return '\n'.join(declarations)
 
@@ -1987,6 +2005,7 @@ def _generate_definitions(database_name, messages: List[Message], floating_point
     msg_name_from_id = ''
     index_from_id = ''
     id_from_index = ''
+    id_is_message = ''
 
     to_string_from_id = '''int {database_name}_to_string_from_id(uint16_t message_id,
                                 void* message,
@@ -2085,6 +2104,8 @@ def _generate_definitions(database_name, messages: List[Message], floating_point
     raw->_timestamp = _timestamp;
 #endif // CANLIB_TIMESTAMP
 '''
+
+        id_is_message += NET_ID_IS_MESSAGE_BODY.format(db_name=database_name.upper(), msg_name=message.snake_name.upper())
 
         message_raw_to_conversion_struct = MESSAGE_DEFINITION_RAW_TO_CONVERSION_STRUCT.format(database_name=database_name,
                                                                                 message_name=message.snake_name,
@@ -2226,7 +2247,10 @@ def _generate_definitions(database_name, messages: List[Message], floating_point
             definitions.append(definition)
 
         definitions.append(enum_to_string)
-        
+    
+    definitions.append(NET_ID_IS_MESSAGE_DEFINITION.format(
+        database_name=database_name,
+        net_id_is_message_body=id_is_message))
     definitions.append(MSG_NAME_FROM_ID.format(database_name=database_name, body=msg_name_from_id))
     definitions.append(INDEX_FROM_ID.format(database_name=database_name, body=index_from_id))
     definitions.append(ID_FROM_INDEX.format(database_name=database_name, body=id_from_index))
