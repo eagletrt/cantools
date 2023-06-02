@@ -200,8 +200,10 @@ def load_string(string: str, strict: bool = True,
             cycle_time = message['interval']
         if 'description' in message:
             comment = message['description']
+        
+        id = None
+        msg_name = message['name']
         for sending in message['sending']:
-            msg_name = message['name']
             if 'topic' in message:
                 if len(message['sending']) > 1:
                     id = ids[message['topic']]['messages'][message['name']][f"{message['name']}_{sending}"]
@@ -215,5 +217,5 @@ def load_string(string: str, strict: bool = True,
             for signal in message['contents']:
                 offset, s = get_signal(signal, message['contents'][signal], offset, db['types'])
                 signals += s
-            msgs.append(Message(id, msg_name, offset, signals, comment=comment, cycle_time=cycle_time))
+        msgs.append(Message(id, msg_name, offset, signals, comment=comment, cycle_time=cycle_time))
     return InternalDatabase(msgs, list(nodes), [], "1")
