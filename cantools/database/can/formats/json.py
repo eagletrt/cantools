@@ -106,7 +106,7 @@ def generate_topics_id(db):
 
 
 lengths = {'bool': 1, 'uint8': 8, 'int8': 8, 'uint16': 16, 'int16': 16, 'uint32': 32, 'int32': 32,
-            'uint64': 64, 'int64': 64, 'float32': 32}
+            'uint64': 64, 'int64': 64, 'float32': 32, 'float64': 64}
 types_size = [1, 8, 16, 32, 64]
 
 def get_length(range, precision):
@@ -115,6 +115,7 @@ def get_length(range, precision):
 def get_signal(name, signal, offset: int, types):
     is_float = False
     choices = None
+    is_signed = False
     precision = 1
     if isinstance(signal, dict):
         if signal['type'][:5] == 'float':
@@ -146,17 +147,27 @@ def get_signal(name, signal, offset: int, types):
                 return (offset, ret)
         else:
             type = lengths[signal]
-        minimum = 0
-        maximum = 1<<type
+
+        if "int" in signal and signal[0] == 'i':
+            is_signed = True
+        if is_signed:
+            maximum = (1<<(type-1))-1
+            minimum = -(1<<(type-1))
+        else:
+            minimum = 0
+            maximum = (1<<type)-1
+
     if maximum < minimum:
         maximum, minimum = minimum, maximum
     if is_float:
         precision = abs(maximum-minimum) / ((1<<type)-1)
     for i in types_size:
-        if i > type:
+        if i >= type:
             type = i
             break
-    return (offset+type, [Signal(name, offset, type, is_float=False, minimum=minimum, maximum=maximum, offset=(minimum), scale=precision,
+    
+    
+    return (offset+type, [Signal(name, offset, type, is_float=False, minimum=minimum, maximum=maximum, offset=(minimum), scale=precision, is_signed=is_signed,
                             decimal=Decimal(precision, (minimum), minimum, maximum), choices=choices)])
 
 def get_reserved_ids(db, messages) -> set:

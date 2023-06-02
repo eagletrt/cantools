@@ -687,22 +687,22 @@ void {database_name}_{message_name}_conversion_to_raw_struct(
 SIGNAL_DECLARATION_TO_ = '''    {signal_type} {signal_name},
 '''
 
-SIGNAL_DEFINITION_RAW_TO_CONVERT_STRUCT_FLOAT = '''    conversion->{signal_name} = {database_name}_{message_name}_{signal_name}_decode(raw->{signal_name}); 
+SIGNAL_DEFINITION_RAW_TO_CONVERT_STRUCT_FLOAT = '''    conversion->{signal_name} = {database_name}_{message_name}_{signal_name}_decode(raw->{signal_name});
 '''
-SIGNAL_DEFINITION_CONVERT_TO_RAW_STRUCT_FLOAT = '''    raw->{signal_name} = {database_name}_{message_name}_{signal_name}_encode(conversion->{signal_name}); 
+SIGNAL_DEFINITION_CONVERT_TO_RAW_STRUCT_FLOAT = '''    raw->{signal_name} = {database_name}_{message_name}_{signal_name}_encode(conversion->{signal_name});
 '''
-SIGNAL_DEFINITION_RAW_TO_CONVERT_FLOAT = '''    conversion->{signal_name} = {database_name}_{message_name}_{signal_name}_decode({signal_name}); 
+SIGNAL_DEFINITION_RAW_TO_CONVERT_FLOAT = '''    conversion->{signal_name} = {database_name}_{message_name}_{signal_name}_decode({signal_name});
 '''
-SIGNAL_DEFINITION_CONVERT_TO_RAW_FLOAT = '''    raw->{signal_name} = {database_name}_{message_name}_{signal_name}_encode({signal_name}); 
+SIGNAL_DEFINITION_CONVERT_TO_RAW_FLOAT = '''    raw->{signal_name} = {database_name}_{message_name}_{signal_name}_encode({signal_name});
 '''
 
-SIGNAL_DEFINITION_RAW_TO_CONVERT_STRUCT = '''    conversion->{signal_name} = raw->{signal_name}; 
+SIGNAL_DEFINITION_RAW_TO_CONVERT_STRUCT = '''    conversion->{signal_name} = raw->{signal_name};
 '''
-SIGNAL_DEFINITION_CONVERT_TO_RAW_STRUCT = '''    raw->{signal_name} = conversion->{signal_name}; 
+SIGNAL_DEFINITION_CONVERT_TO_RAW_STRUCT = '''    raw->{signal_name} = conversion->{signal_name};
 '''
-SIGNAL_DEFINITION_RAW_TO_CONVERT = '''    conversion->{signal_name} = {signal_name}; 
+SIGNAL_DEFINITION_RAW_TO_CONVERT = '''    conversion->{signal_name} = {signal_name};
 '''
-SIGNAL_DEFINITION_CONVERT_TO_RAW = '''    raw->{signal_name} = {signal_name}; 
+SIGNAL_DEFINITION_CONVERT_TO_RAW = '''    raw->{signal_name} = {signal_name};
 '''
 
 SIGNAL_DEFINITION_ENCODE_FMT = '''\
@@ -817,6 +817,26 @@ ENUM_TO_STRING = '''int {database_name}_{message_name}_{signal_name}_enum_to_str
     return 0;
 }}'''
 ENUM_TO_STRING_DECLARATION = '''int {database_name}_{message_name}_{signal_name}_enum_to_string({database_name}_{message_name}_{signal_name} value, char *buffer);\n'''
+
+BITSET_BIT_OP_DECLARATION = '''
+void {database_name}_{message_name}_{signal_name}_set_bit({database_name}_{message_name}_{signal_name}_t *bitset, uint8_t bit, uint8_t value);
+uint8_t {database_name}_{message_name}_{signal_name}_get_bit(const {database_name}_{message_name}_{signal_name}_t *bitset, uint8_t bit);
+{enum_type} {database_name}_{message_name}_{signal_name}_to_uint(const {database_name}_{message_name}_{signal_name}_t *bitset);
+'''
+BITSET_BIT_SET_DEFINITION = '''
+void {database_name}_{message_name}_{signal_name}_set_bit({database_name}_{message_name}_{signal_name}_t *bitset, uint8_t bit, uint8_t value)
+{{
+    // cast a c bitset to uint8
+    {enum_type} *bitset_uint8 = ({enum_type} *)bitset;
+    if (bit > sizeof({enum_type}))
+        return;
+    
+    if (value == 0)
+        *bitset_uint8 &= ~(1 << bit);
+    else
+        *bitset_uint8 |= (1 << bit);
+}}
+'''
 
 CHOICE_TO_STRING = '''\t\tcase {case}: return sprintf(buffer, "{choice}");\n'''
 
@@ -1938,6 +1958,13 @@ def _generate_declarations(database_name, messages: List[Message], floating_poin
                     message_name = message.snake_name,
                     signal_name = signal.snake_name
                 )
+            # if signal.length <= 1:
+            #     signal_declarations.append(BITSET_BIT_OP_DECLARATION.format(
+            #         database_name = database_name,
+            #         message_name = message.snake_name,
+            #         signal_name = signal.snake_name,
+            #         enum_type = signal.enum_name
+            #     ))
         declaration = ""
 
         declarations.append(_get_raw_to_conversion_head(database_name, message) + ";\n")
