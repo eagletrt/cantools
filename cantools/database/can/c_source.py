@@ -62,6 +62,11 @@ extern "C" {{
 #include <stdbool.h>
 #include <stddef.h>
 
+#ifndef CANLIB_BUILD
+#define CANLIB_BUILD
+#define CANLIB_BUILD_TIME {timestamp}
+#endif // CANLIB_BUILD
+
 #ifndef CANLIB_PARKING
 /* We know it's PACKING but PARKING sounds a bit better ;) */
 #if defined(__MINGW32__)
@@ -2448,7 +2453,8 @@ def generate(database,
                                database_name=database_name,
                                msg_count=len(messages),
                                structs=structs,
-                               declarations=declarations)
+                               declarations=declarations,
+                               timestamp=int(time.time()))
 
     source = SOURCE_FMT.format(version=__version__,
                                date=date,
