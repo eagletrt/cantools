@@ -92,7 +92,7 @@ def generate_from_db(dbase, database_name, no_floating_point_numbers = False, ge
     filename_c = database_name + '_network.c'
     fuzzer_filename_c = 'network_fuzzer.c'
     fuzzer_filename_mk = 'network_fuzzer.mk'
-    file_name_watchdog = database_name + '_network_watchdog.h'
+    file_name_watchdog = database_name + '_watchdog.h'
     filename_proto = database_name + ".proto"
     filename_proto_interface = database_name + "_proto_interface.h"
 
