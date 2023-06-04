@@ -443,7 +443,7 @@ PROTO_INTERFACE = '''
 #define __{db_name}_IMPLEMENTATION
 #endif
 
-#include "../../lib/{db_name}/network.h"
+#include "../../lib/{db_name}/{db_name}_network.h"
 
 #ifdef __{db_name}_IMPLEMENTATION
 #undef __{db_name}_IMPLEMENTATION

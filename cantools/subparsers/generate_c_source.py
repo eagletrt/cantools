@@ -88,11 +88,11 @@ def _do_generate_c_source(args):
 def generate_from_db(dbase, database_name, no_floating_point_numbers = False, generate_fuzzer = False, bit_fields=False,
                      use_float=True, node=None, output_directory='.'):
 
-    filename_h = 'network.h'
-    filename_c = 'network.c'
+    filename_h = database_name + '_network.h'
+    filename_c = database_name + '_network.c'
     fuzzer_filename_c = 'network_fuzzer.c'
     fuzzer_filename_mk = 'network_fuzzer.mk'
-    file_name_watchdog = 'network_watchdog.h'
+    file_name_watchdog = database_name + '_network_watchdog.h'
     filename_proto = database_name + ".proto"
     filename_proto_interface = database_name + "_proto_interface.h"
 
