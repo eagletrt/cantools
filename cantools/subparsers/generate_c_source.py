@@ -11,6 +11,7 @@ from ..database.can.watchdog import generate_watchdog
 
 LIBPATH = '/lib/{network}/'
 PROTOPATH = '/proto/{network}/'
+DBCPATH = '/dbc/{network}'
 
 def load_database_folder(args, path):
     # Check if path is a folder
@@ -82,11 +83,11 @@ def _do_generate_c_source(args):
     
     for dbase, dbase_name in zip(dbases, dbases_names):
         generate_from_db(dbase, dbase_name, args.no_floating_point_numbers, args.generate_fuzzer, args.bit_fields,
-                        args.use_float, args.node, args.output_directory)
+                        args.use_float, args.node, args.output_directory, args.generate_dbc)
 
 
 def generate_from_db(dbase, database_name, no_floating_point_numbers = False, generate_fuzzer = False, bit_fields=False,
-                     use_float=True, node=None, output_directory='.'):
+                     use_float=True, node=None, output_directory='.', generate_dbc=False):
 
     filename_h = database_name + '_network.h'
     filename_c = database_name + '_network.c'
@@ -95,6 +96,7 @@ def generate_from_db(dbase, database_name, no_floating_point_numbers = False, ge
     file_name_watchdog = database_name + '_watchdog.h'
     filename_proto = database_name + ".proto"
     filename_proto_interface = database_name + "_proto_interface.h"
+    filename_dbc = database_name + '.dbc'
 
     proto = generate_proto(dbase, database_name)
     proto_interface = generate_proto_interface(dbase, database_name)
@@ -113,9 +115,11 @@ def generate_from_db(dbase, database_name, no_floating_point_numbers = False, ge
 
     libpath = LIBPATH.format(network=database_name)
     protopath = PROTOPATH.format(network=database_name)
+    dbcpath = DBCPATH.format(network=database_name)
 
     os.makedirs(output_directory+libpath, exist_ok=True)
     os.makedirs(output_directory+protopath, exist_ok=True)
+    os.makedirs(output_directory+dbcpath, exist_ok=True)
     
     path_h = os.path.join(output_directory+libpath, filename_h)
     
@@ -141,6 +145,12 @@ def generate_from_db(dbase, database_name, no_floating_point_numbers = False, ge
 
     with open(path_watchdog, 'w') as fout:
         fout.write(watchdog)
+
+    if generate_dbc:
+        path_dbc = os.path.join(output_directory+dbcpath, filename_dbc)
+
+        with open(path_dbc, 'w') as fout:
+            fout.write(dbase.as_dbc_string(shorten_long_names=False))
 
     print(f'Successfully generated {path_h} and {path_c} and {path_proto} and {path_proto_interface}.')
 
@@ -209,7 +219,13 @@ def add_subparser(subparsers):
     generate_c_source_parser.add_argument(
         '--node',
         help='Generate pack/unpack functions only for messages sent/received by the node.')
-    
+    generate_c_source_parser.add_argument(
+        '--generate-dbc',
+        action='store_true',
+        default=False,
+        help='Generate the dbc file'
+    )
+
     in_group = generate_c_source_parser.add_mutually_exclusive_group(required=True)
     in_group.add_argument(
         '--infile',
