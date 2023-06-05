@@ -40,13 +40,13 @@ def load_database_folder(args, path):
             raise argparse.ArgumentTypeError(f"{subfolder} does not contain a .dbc or .json file")
         # Load dbc files, then json files
         db = None
-        for dbc_file in dbc_files:
+        for dbc_name, dbc_path in dbc_files:
             if db is None:
-                db = database.load_file(dbc_file, encoding=args.encoding,
+                db = database.load_file(dbc_path, encoding=args.encoding,
                                         prune_choices=args.prune,
                                         strict=not args.no_strict)
             else:
-                db.add_dbc_file(dbc_file)
+                db.add_dbc_file(dbc_path)
         for json_name, json_path in json_files:
             if db is None:
                 db = database.load_file(json_path, encoding=args.encoding,
