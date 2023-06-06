@@ -493,7 +493,7 @@ DECLARATION_PACK_FMT = '''\
 int {database_name}_{message_name}_pack(
     uint8_t *dst_p,
     const {database_name}_{message_name}_t *src_p,
-    size_t size);
+    size_t bit_size);
 
 '''
 
@@ -510,7 +510,7 @@ DECLARATION_UNPACK_FMT = '''\
 int {database_name}_{message_name}_unpack(
     {database_name}_{message_name}_t *dst_p,
     const uint8_t *src_p,
-    size_t size
+    size_t bit_size
     #ifdef CANLIB_TIMESTAMP
         , uint64_t _timestamp
     #endif // CANLIB_TIMESTAMP
@@ -613,11 +613,11 @@ DEFINITION_PACK_FMT = '''\
 int {database_name}_{message_name}_pack(
     uint8_t *dst_p,
     const {database_name}_{message_name}_t *src_p,
-    size_t size)
+    size_t bit_size)
 {{
 {pack_unused}\
 {pack_variables}\
-    if (size < {message_length}u) {{
+    if (bit_size < {message_length}u) {{
         return (-EINVAL);
     }}
 
@@ -632,7 +632,7 @@ DEFINITION_UNPACK_FMT = '''\
 int {database_name}_{message_name}_unpack(
     {database_name}_{message_name}_t *dst_p,
     const uint8_t *src_p,
-    size_t size
+    size_t bit_size
     #ifdef CANLIB_TIMESTAMP
         , uint64_t _timestamp
     #endif // CANLIB_TIMESTAMP
@@ -640,7 +640,7 @@ int {database_name}_{message_name}_unpack(
 {{
 {unpack_unused}\
 {unpack_variables}\
-    if (size < {message_length}u) {{
+    if (bit_size < {message_length}u) {{
         return (-EINVAL);
     }}
 #ifdef CANLIB_TIMESTAMP
@@ -1775,17 +1775,17 @@ def _generate_frame_id_defines(database_name, messages, node_name):
     ])
 
 
-def _generate_frame_length_defines(database_name, messages, node_name):
+def _generate_frame_length_defines(database_name, messages: List[Message], node_name):
     result = '\n'.join([
-        '#define {}_{}_LENGTH ({}u)'.format(
+        '#define {}_{}_BIT_SIZE ({}u)'.format(
             database_name.upper(),
             message.snake_name.upper(),
             message.length)
         for message in messages if _is_sender_or_receiver(message, node_name)
     ])
-    result += '\n\n/* LENGTH IN BYTES */\n\n'
+    result += '\n\n/* LENGTH IN BYTES */\n'
     result += '\n'.join([
-        '#define {}_{}_SIZE ({}u)'.format(
+        '#define {}_{}_BYTE_SIZE ({}u)'.format(
             database_name.upper(),
             message.snake_name.upper(),
             (message.length+7)//8)
