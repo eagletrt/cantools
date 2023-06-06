@@ -1777,21 +1777,12 @@ def _generate_frame_id_defines(database_name, messages, node_name):
 
 def _generate_frame_length_defines(database_name, messages: List[Message], node_name):
     result = '\n'.join([
-        '#define {}_{}_BIT_SIZE ({}u)'.format(
+        '#define {}_{}_BYTE_SIZE ({}u)'.format(
             database_name.upper(),
             message.snake_name.upper(),
             message.length)
         for message in messages if _is_sender_or_receiver(message, node_name)
     ])
-    result += '\n\n/* LENGTH IN BYTES */\n'
-    result += '\n'.join([
-        '#define {}_{}_BYTE_SIZE ({}u)'.format(
-            database_name.upper(),
-            message.snake_name.upper(),
-            (message.length+7)//8)
-        for message in messages if _is_sender_or_receiver(message, node_name)
-    ])
-
     return result
 
 

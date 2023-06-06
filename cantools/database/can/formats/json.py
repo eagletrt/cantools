@@ -67,6 +67,8 @@ def generate_ids(db, blacklist=set()):
 
     return ids
 
+def bit_to_bytes(bits):
+    return (bits+7)//8
 
 def generate_messages_id(topic_messages, topic: int, blacklist=set()):
     generator = IdGenerator(topic, blacklist)
@@ -109,7 +111,7 @@ lengths = {'bool': 1, 'uint8': 8, 'int8': 8, 'uint16': 16, 'int16': 16, 'uint32'
 types_size = [1, 8, 16, 32, 64]
 
 def get_length(range, precision):
-    return math.ceil((math.log2(range//precision)+1)/8)
+    return math.ceil(math.log2(range//precision))
 
 def get_signal(name, signal, offset: int, types):
     is_float = False
@@ -217,5 +219,5 @@ def load_string(string: str, strict: bool = True,
             for signal in message['contents']:
                 offset, s = get_signal(signal, message['contents'][signal], offset, db['types'])
                 signals += s
-        msgs.append(Message(id, msg_name, offset, signals, comment=comment, cycle_time=cycle_time))
+        msgs.append(Message(id, msg_name, bit_to_bytes(offset), signals, comment=comment, cycle_time=cycle_time))
     return InternalDatabase(msgs, list(nodes), [], "1")
