@@ -115,7 +115,6 @@ def generate_from_db(dbase, database_name, no_floating_point_numbers = False, ge
 
     libpath = LIBPATH.format(network=database_name)
     protopath = PROTOPATH.format(network=database_name)
-    dbcpath = DBCPATH.format(network=database_name)
 
     os.makedirs(output_directory+libpath, exist_ok=True)
     os.makedirs(output_directory+protopath, exist_ok=True)
@@ -147,6 +146,7 @@ def generate_from_db(dbase, database_name, no_floating_point_numbers = False, ge
         fout.write(watchdog)
 
     if generate_dbc:
+        dbcpath = DBCPATH.format(network=database_name)
         path_dbc = os.path.join(output_directory+dbcpath, filename_dbc)
 
         with open(path_dbc, 'w') as fout:
