@@ -162,7 +162,7 @@ def get_signal(name, signal, offset: int, types):
         precision = abs(maximum-minimum) / ((1<<type)-1)
     if is_float:
         for i in types_size:
-            if i > type:
+            if i >= type:
                 type = i
                 break
     
