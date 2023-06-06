@@ -798,7 +798,7 @@ MESSAGE_DEFINITION_TO_STRING = '''int {database_name}_{message_name}_to_string({
         buffer,
         ""
         #ifdef CANLIB_TIMESTAMP
-        "%u"","
+        "%" PRIu64 ","
         #endif // CANLIB_TIMESTAMP
 '''
 
@@ -870,7 +870,7 @@ MESSAGE_DEFINITION_TO_STRING_FILE = '''int {database_name}_{message_name}_to_str
         buffer,
         ""
         #ifdef CANLIB_TIMESTAMP
-        "%u"","
+        "%" PRIu64 ","
         #endif // CANLIB_TIMESTAMP
 '''
 
