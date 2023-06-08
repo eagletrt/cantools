@@ -493,7 +493,7 @@ DECLARATION_PACK_FMT = '''\
 int {database_name}_{message_name}_pack(
     uint8_t *dst_p,
     const {database_name}_{message_name}_t *src_p,
-    size_t bit_size);
+    size_t byte_size);
 
 '''
 
@@ -510,7 +510,7 @@ DECLARATION_UNPACK_FMT = '''\
 int {database_name}_{message_name}_unpack(
     {database_name}_{message_name}_t *dst_p,
     const uint8_t *src_p,
-    size_t bit_size
+    size_t byte_size
     #ifdef CANLIB_TIMESTAMP
         , uint64_t _timestamp
     #endif // CANLIB_TIMESTAMP
@@ -613,11 +613,11 @@ DEFINITION_PACK_FMT = '''\
 int {database_name}_{message_name}_pack(
     uint8_t *dst_p,
     const {database_name}_{message_name}_t *src_p,
-    size_t bit_size)
+    size_t byte_size)
 {{
 {pack_unused}\
 {pack_variables}\
-    if (bit_size < {message_length}u) {{
+    if (byte_size < {message_length}u) {{
         return (-EINVAL);
     }}
 
@@ -632,7 +632,7 @@ DEFINITION_UNPACK_FMT = '''\
 int {database_name}_{message_name}_unpack(
     {database_name}_{message_name}_t *dst_p,
     const uint8_t *src_p,
-    size_t bit_size
+    size_t byte_size
     #ifdef CANLIB_TIMESTAMP
         , uint64_t _timestamp
     #endif // CANLIB_TIMESTAMP
@@ -640,7 +640,7 @@ int {database_name}_{message_name}_unpack(
 {{
 {unpack_unused}\
 {unpack_variables}\
-    if (bit_size < {message_length}u) {{
+    if (byte_size < {message_length}u) {{
         return (-EINVAL);
     }}
 #ifdef CANLIB_TIMESTAMP
