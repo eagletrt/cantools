@@ -205,6 +205,8 @@ def load_string(string: str, strict: bool = True,
         
         id = None
         msg_name = message['name']
+        topic_name = None
+        topic_id = None
         for sending in message['sending']:
             if 'topic' in message:
                 if len(message['sending']) > 1:
@@ -212,12 +214,16 @@ def load_string(string: str, strict: bool = True,
                     msg_name = f"{message['name']}_{sending}"
                 else:
                     id = ids[message['topic']]['messages'][message['name']][message['name']]
+                topic_id = ids[message['topic']]['id']
+                topic_name = message['topic']
             else:
                 id = message['fixed_id']
+                topic_id = None
+                topic_name = 'FIXED_IDS'
             signals = []
             offset = 0
             for signal in message['contents']:
                 offset, s = get_signal(signal, message['contents'][signal], offset, db['types'])
                 signals += s
-        msgs.append(Message(id, msg_name, bit_to_bytes(offset), signals, comment=comment, cycle_time=cycle_time))
+        msgs.append(Message(id, msg_name, bit_to_bytes(offset), signals, comment=comment, cycle_time=cycle_time, topic_name=topic_name, topic_id=topic_id))
     return InternalDatabase(msgs, list(nodes), [], "1")

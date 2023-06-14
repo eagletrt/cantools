@@ -93,6 +93,9 @@ extern "C" {{
 /* Frame cycle times in milliseconds. */
 {frame_cycle_time_defines}
 
+/* Topics masks */
+{masks_define}
+
 /* Signal choices. */
 {choices_defines}
 
@@ -1143,6 +1146,8 @@ class Message:
 
     def __init__(self, message, database_name):
         self._message = message
+        self.topic_name = message.topic_name    #json
+        self.topic_id = message.topic_id        #json
         self.snake_name = camel_to_snake_case(self.name)
         self.signals = [Signal(signal, self.snake_name, database_name)for signal in message.signals]
         self.has_conversions = False
@@ -1831,6 +1836,26 @@ def _generate_choices_defines(database_name, messages, node_name):
 
     return '\n\n'.join(choices_defines)
 
+def _generate_masks(database_name, messages):
+    topics = {}
+    for msg in messages:
+        if msg.topic_name in topics:
+            topics[msg.topic_name][1].append(msg)
+        else:
+            topics[msg.topic_name] = (msg.topic_id, [msg])
+    ret = ''
+
+    for topic_name in topics:
+        topic_id = topics[topic_name][0]
+        msgs = topics[topic_name][1]
+        ret += f'/* TOPIC {topic_name.upper()} */\n'
+        ret += f'#define {database_name.upper()}_TOPIC_MASK_{topic_name.upper()} 0b00000011111\n\n'
+        if topic_id is not None:
+            ret += f'#define {database_name.upper()}_TOPIC_FILTER_{topic_name.upper()} {"0x{:X}".format(topic_id)} // dec: {topic_id} bin: {"0b{0:>011b}".format(topic_id)}\n\n'
+        for msg in msgs:
+            ret += f'#define {database_name.upper()}_ID_{msg.snake_name.upper()} {"0x{:X}".format(msg.frame_id)} // dec: {msg.frame_id} bin: {"0b{0:>011b}".format(msg.frame_id)}\n'
+        ret += '\n'
+    return ret
 
 def _generate_structs(database_name, messages, bit_fields, node_name):
     structs = []
@@ -2437,6 +2462,7 @@ def generate(database,
         node_name)
     choices_defines = _generate_choices_defines(database_name, messages, node_name)
     structs = _generate_structs(database_name, messages, bit_fields, node_name)
+    masks = _generate_masks(database_name, messages)    #only for json
     declarations = _generate_declarations(database_name,
                                           messages,
                                           floating_point_numbers,
@@ -2457,6 +2483,7 @@ def generate(database,
                                frame_length_defines=frame_length_defines,
                                is_extended_frame_defines=is_extended_frame_defines,
                                frame_cycle_time_defines=frame_cycle_time_defines,
+                               masks_define=masks,
                                choices_defines=choices_defines,
                                message_indexes=message_indexes,
                                database_name=database_name,

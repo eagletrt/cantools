@@ -86,6 +86,8 @@ class Message:
                  strict: bool = True,
                  protocol: Optional[str] = None,
                  sort_signals: type_sort_signals = sort_signals_by_start_bit,
+                 topic_name: Optional[str] = None,
+                 topic_id: Optional[int] = None
                  ) -> None:
         frame_id_bit_length = frame_id.bit_length()
 
@@ -140,6 +142,11 @@ class Message:
         self._signal_tree: Optional[List[Union[str, List[str]]]] = None
         self._strict = strict
         self._protocol = protocol
+
+        #only for json
+        self.topic_name = topic_name
+        self.topic_id = topic_id
+
         self.refresh()
 
     def _create_codec(self,
