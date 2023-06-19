@@ -1846,6 +1846,8 @@ def _generate_masks(database_name, messages):
     ret = ''
 
     for topic_name in topics:
+        if topic_name == None:
+            continue
         topic_id = topics[topic_name][0]
         msgs = topics[topic_name][1]
         ret += f'/* TOPIC {topic_name.upper()} */\n'

@@ -46,7 +46,14 @@ def _generate_enums(database_name, messages):
 
     for enum in s:
         ret += "enum " + enum + " {\n"
+        found = False
         for choice in s[enum]:
+            if choice == 0:
+                found = True
+                break
+        if not found:
+            ret += f"\t{enum}_none = 0;\n"
+        for choice in sorted(s[enum]):
             ret += f"\t{enum}_{s[enum][choice]} = {choice};\n"
         ret += "}\n"
     return ret
