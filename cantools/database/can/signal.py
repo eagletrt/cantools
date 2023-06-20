@@ -322,6 +322,10 @@ class Signal:
 
         return self.comments.get('EN')
 
+    @property
+    def is_bool(self):
+        return self.maximum == 1 and self.minimum == 0 and self.scale == 1
+
     @comment.setter
     def comment(self, value: Optional[str]) -> None:
         if value is None:

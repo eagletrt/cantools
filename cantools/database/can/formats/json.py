@@ -143,7 +143,7 @@ def get_signal(name, signal, offset: int, types):
             else:       #bitset
                 ret = []
                 for item in types[signal]['items']:
-                    ret.append(Signal(name + '_' + item, offset, 1, is_float=False, minimum=0, maximum=0, decimal=Decimal(1, 0, 0, 1)))
+                    ret.append(Signal(name + '_' + item, offset, 1, is_float=False, minimum=0, maximum=1, decimal=Decimal(1, 0, 0, 1)))
                     offset += 1
                 return (offset, ret)
         else:

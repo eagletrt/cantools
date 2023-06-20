@@ -17,6 +17,10 @@ class Signal:
         return getattr(self._signal, name)
 
     @property
+    def is_bool(self):
+        return self._signal.is_bool
+
+    @property
     def unit(self):
         return _get(self._signal.unit, '-')
     
@@ -79,40 +83,6 @@ class Signal:
             }[self.type_length]
         except KeyError:
             return ''
-
-    @property
-    def unique_choices(self):
-        """Make duplicated choice names unique by first appending its value
-        and then underscores until unique.
-
-        """
-
-        items = {
-            value: camel_to_snake_case(str(name)).upper()
-            for value, name in self.choices.items()
-        }
-        names = list(items.values())
-        duplicated_names = [
-            name
-            for name in set(names)
-            if names.count(name) > 1
-        ]
-        unique_choices = {
-            value: name
-            for value, name in items.items()
-            if names.count(name) == 1
-        }
-
-        for value, name in items.items():
-            if name in duplicated_names:
-                name += _canonical(f'_{value}')
-
-                while name in unique_choices.values():
-                    name += '_'
-
-                unique_choices[value] = name
-
-        return unique_choices
 
     @property
     def is_float_conversion(self):
@@ -537,6 +507,8 @@ DESERIALIZE_SIGNAL_ENUM = '''\t\t(*net_enums)["{name_m}"]["{signal_name}"].push(
 \t\t{database_name}_{name}_{signal_name}_enum_to_string(({database_name}_{name}_{signal_name})pack->{name}(i).{signal_name}(), buffer);
 \t\t(*net_strings)["{name_m}"]["{signal_name}"].push(buffer);
 '''
+DESERIALIZE_SIGNAL_BITSET = '''\t\t(*net_enums)["{name_m}"]["{signal_name}"].push(pack->{name}(i).{signal_name}());
+'''
 
 SERIALIZE_MESSAGE = '''
         case {id}: {{
@@ -562,7 +534,9 @@ def _generate_deserialize(database_name, messages):
         signals = ''
         for signal in msg.signals:
             if signal.is_enum:
-                signals+=DESERIALIZE_SIGNAL_ENUM.format(database_name=database_name, name_m=name_m, name=name, signal_name=signal.name.lower())
+                signals += DESERIALIZE_SIGNAL_ENUM.format(database_name=database_name, name_m=name_m, name=name, signal_name=signal.name.lower())
+            elif signal.is_bool:
+                signals += DESERIALIZE_SIGNAL_BITSET.format(database_name=database_name, name_m=name_m, name=name, signal_name=signal.name.lower())
             else:
                 signals += DESERIALIZE_SIGNAL.format(name_m=name_m, name=name, signal_name=signal.name.lower())
         ret += DESERIALIZE_MESSAGE.format(name=name, name_m=name_m, signals=signals)
