@@ -104,22 +104,16 @@ extern "C" {{
 
 #define {database_name}_MESSAGE_COUNT {msg_count}
 
-#ifndef CANLIB_DEVICES_STRUCT
-#define CANLIB_DEVICES_STRUCT
 typedef struct {{
-    uint16_t id;
-    void* message_raw;
-    void* message_conversion;
-}} devices_t;
-#endif // CANLIB_DEVICES_STRUCT
+    void* message;
+    void* _converted=NULL;
+    void* _raw=NULL;
+    int _size_raw=0;
+    int _size_converted=0;
+}} device_t;
 
-typedef devices_t {database_name}_devices[{database_name}_MESSAGE_COUNT];
-
-
-{database_name}_devices* {database_name}_devices_new();
-void {database_name}_devices_free({database_name}_devices* devices);
 void {database_name}_devices_deserialize_from_id(
-    {database_name}_devices* devices,
+    device_t* device,
     uint16_t message_id,
     uint8_t* data
 #ifdef CANLIB_TIMESTAMP
@@ -407,18 +401,9 @@ typedef struct CANLIB_PARKING {{
 MESSAGE_INDEX = '''#define {database_name}_{message_name}_INDEX {index}
 '''
 
-DEVICES_DEFINITIONS = '''{database_name}_devices* {database_name}_devices_new() {{
-    {database_name}_devices* devices = ({database_name}_devices*) malloc(sizeof({database_name}_devices));
-{devices_new_body}    return devices;
-}}
-
-void {database_name}_devices_free({database_name}_devices* devices) {{
-{devices_free_body}\
-    free(devices);
-}}
-
+DEVICES_DEFINITIONS = '''
 void {database_name}_devices_deserialize_from_id(
-    {database_name}_devices* devices,
+    device_t* device,
     uint16_t message_id,
     uint8_t* data
     #ifdef CANLIB_TIMESTAMP
@@ -432,38 +417,37 @@ void {database_name}_devices_deserialize_from_id(
 }}
 '''
 
-DEVICE_MESSAGE_NEW = '''\
-    (*devices)[{database_name_m}_{message_name_m}_INDEX].id = {id};
-    (*devices)[{database_name_m}_{message_name_m}_INDEX].message_raw = (void*) malloc(sizeof({database_name}_{message_name}_t));
-    (*devices)[{database_name_m}_{message_name_m}_INDEX].message_conversion = NULL;
-'''
-DEVICE_MESSAGE_NEW_CONVERTED = '''\
-    (*devices)[{database_name_m}_{message_name_m}_INDEX].id = {id};
-    (*devices)[{database_name_m}_{message_name_m}_INDEX].message_raw = (void*) malloc(sizeof({database_name}_{message_name}_t));
-    (*devices)[{database_name_m}_{message_name_m}_INDEX].message_conversion = (void*) malloc(sizeof({database_name}_{message_name}_converted_t));
-'''
-DEVICE_MESSAGE_FREE = '''\
-    free((*devices)[{database_name_m}_{message_name_m}_INDEX].message_raw);
-'''
 DEVICE_MESSAGE_DESERIALIZE = '''\
         case {id}: {{
+            if(sizeof({database_name}_{message_name}_t) > device->_size_raw) {{
+                free(device->_raw);
+                device->_raw = malloc(sizeof({database_name}_{message_name}_t));
+                device->_size_raw = sizeof({database_name}_{message_name}_t);
+            }}
             {database_name}_{message_name}_unpack(
-                ({database_name}_{message_name}_t*) (*devices)[{database_name_m}_{message_name_m}_INDEX].message_raw,
+                ({database_name}_{message_name}_t*) device->_raw,
                 data,
                 {message_length}
                 #ifdef CANLIB_TIMESTAMP
                 , timestamp
                 #endif
             );
+            device->message = device->_raw;
             {conversion_component}
             return;
         }}
 '''
 DEVICE_MESSAGE_DESERIALIZE_CONVERSION_COMPONENT = '''
+            if(sizeof({database_name}_{message_name}_converted_t) > device->_size_converted) {{
+                free(device->_converted);
+                device->_converted = malloc(sizeof({database_name}_{message_name}_converted_t));
+                device->_size_converted = sizeof({database_name}_{message_name}_converted_t);
+            }}
             {database_name}_{message_name}_raw_to_conversion_struct(
-                (*devices)[{database_name_m}_{message_name_m}_INDEX].message_conversion,
-                (*devices)[{database_name_m}_{message_name_m}_INDEX].message_raw
+                ({database_name}_{message_name}_converted_t*) device->_converted,
+                ({database_name}_{message_name}_t*) device->_raw
             );
+            device->message = device->_converted;
 '''
 
 NET_ID_IS_MESSAGE_DECLARATION = '''\
@@ -2097,34 +2081,11 @@ def _generate_definitions(database_name, messages: List[Message], floating_point
         id_from_index += '\t\tcase {}: return {};\n'.format(f'{database_name.upper()}_{message.snake_name.upper()}_INDEX',
                                                     message._message._frame_id)
 
-        if message.has_conversions:
-            devices_new += DEVICE_MESSAGE_NEW_CONVERTED.format(database_name_m=database_name.upper(),
-                                                                message_name_m=message.snake_name.upper(),
-                                                                database_name=database_name,
-                                                                message_name=message.snake_name,
-                                                                id=message._message._frame_id)
-        else:
-            devices_new += DEVICE_MESSAGE_NEW.format(database_name_m=database_name.upper(),
-                                                    message_name_m=message.snake_name.upper(),
-                                                    database_name=database_name,
-                                                    message_name=message.snake_name,
-                                                    id=message._message._frame_id)
-        devices_free += DEVICE_MESSAGE_FREE.format(database_name_m=database_name.upper(),
-                                                message_name_m=message.snake_name.upper(),
-                                                database_name=database_name,
-                                                message_name=message.snake_name)
-        
         conversion_comp = ""
         if message.has_conversions:
-            conversion_comp = DEVICE_MESSAGE_DESERIALIZE_CONVERSION_COMPONENT.format(database_name_m=database_name.upper(),
-                                                                    message_name_m=message.snake_name.upper(),
-                                                                    id=message._message._frame_id,
-                                                                    message_name=message.snake_name,
-                                                                    database_name=database_name,
-                                                                    message_length=message.length)
-        devices_deserialize += DEVICE_MESSAGE_DESERIALIZE.format(database_name_m=database_name.upper(),
-                                                                message_name_m=message.snake_name.upper(),
-                                                                id=message._message._frame_id,
+            conversion_comp = DEVICE_MESSAGE_DESERIALIZE_CONVERSION_COMPONENT.format(message_name=message.snake_name,
+                                                                    database_name=database_name)
+        devices_deserialize += DEVICE_MESSAGE_DESERIALIZE.format(id=message._message._frame_id,
                                                                 message_name=message.snake_name,
                                                                 database_name=database_name,
                                                                 message_length=message.length,

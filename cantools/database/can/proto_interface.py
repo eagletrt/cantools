@@ -462,7 +462,7 @@ typedef std::unordered_map<messages_name, message_strings> network_strings;
 
 #endif // CANLIB_PROTO_INTERFACE_TYPES
 
-void {db_name}_proto_interface_serialize_from_id(canlib_message_id id, {db_name}::Pack* pack, {db_name}_devices* map);
+void {db_name}_proto_interface_serialize_from_id(canlib_message_id id, {db_name}::Pack* pack, device_t* device);
 void {db_name}_proto_interface_deserialize({db_name}::Pack* pack, network_enums* net_enums, network_signals* net_signals, network_strings* net_strings, uint64_t resample_us);
 
 #ifdef {db_name}_PROTO_INTERAFCE_IMPLEMENTATION
@@ -472,7 +472,7 @@ void {db_name}_proto_interface_deserialize({db_name}::Pack* pack, network_enums*
     {deserialize}
 }}
 
-void {db_name}_proto_interface_serialize_from_id(canlib_message_id id, {db_name}::Pack* pack, {db_name}_devices* map) {{
+void {db_name}_proto_interface_serialize_from_id(canlib_message_id id, {db_name}::Pack* pack, device_t* device) {{
     int index = {db_name}_index_from_id(id);
 
     if (index == -1) return;
@@ -512,7 +512,7 @@ DESERIALIZE_SIGNAL_BITSET = '''\t\t(*net_enums)["{name_m}"]["{signal_name}"].pus
 
 SERIALIZE_MESSAGE = '''
         case {id}: {{
-            {db_name}_{name_m}_t* msg = ({db_name}_{name_m}_t*)((*map)[index].{dev_name});
+            {db_name}_{name_m}_t* msg = ({db_name}_{name_m}_t*)(devices->raw);
             {db_name}::{name_m_U}* proto_msg = pack->add_{proto_name}();
 {signals}
 #ifdef CANLIB_TIMESTAMP
