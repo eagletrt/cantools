@@ -113,7 +113,7 @@ types_size = [1, 8, 16, 32, 64]
 def get_length(range, precision):
     return math.ceil(math.log2(range//precision))
 
-def get_signal(name, signal, offset: int, types):
+def get_signal(name, signal, offset: int, types, endianness):
     is_float = False
     choices = None
     is_signed = False
@@ -143,7 +143,7 @@ def get_signal(name, signal, offset: int, types):
             else:       #bitset
                 ret = []
                 for item in types[signal]['items']:
-                    ret.append(Signal(name + '_' + item, offset, 1, is_float=False, minimum=0, maximum=1, decimal=Decimal(1, 0, 0, 1)))
+                    ret.append(Signal(name + '_' + item, offset, 1, is_float=False, minimum=0, maximum=1, decimal=Decimal(1, 0, 0, 1), byte_order=endianness))
                     offset += 1
                 return (offset, ret)
         else:
@@ -170,7 +170,7 @@ def get_signal(name, signal, offset: int, types):
     
     
     return (offset+type, [Signal(name, offset, type, is_float=False, minimum=minimum, maximum=maximum, offset=(minimum), scale=precision, is_signed=is_signed,
-                            decimal=Decimal(precision, (minimum), minimum, maximum), choices=choices)])
+                            decimal=Decimal(precision, (minimum), minimum, maximum), choices=choices, byte_order=endianness)])
 
 def get_reserved_ids(db, messages) -> set:
     ret = set()
@@ -202,7 +202,10 @@ def load_string(string: str, strict: bool = True,
             cycle_time = message['interval']
         if 'description' in message:
             comment = message['description']
-        
+        endianness = 'little_endian'
+        if 'endianness' in message:
+            if message['endianness'] == 'bigAss':
+                endianness = 'big_endian'
         id = None
         msg_name = message['name']
         topic_name = None
@@ -223,7 +226,7 @@ def load_string(string: str, strict: bool = True,
             signals = []
             offset = 0
             for signal in message['contents']:
-                offset, s = get_signal(signal, message['contents'][signal], offset, db['types'])
+                offset, s = get_signal(signal, message['contents'][signal], offset, db['types'], endianness=endianness)
                 signals += s
         msgs.append(Message(id, msg_name, bit_to_bytes(offset), signals, comment=comment, cycle_time=cycle_time, topic_name=topic_name, topic_id=topic_id))
     return InternalDatabase(msgs, list(nodes), [], "1")
