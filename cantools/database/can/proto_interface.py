@@ -512,7 +512,7 @@ DESERIALIZE_SIGNAL_BITSET = '''\t\t(*net_enums)["{name_m}"]["{signal_name}"].pus
 
 SERIALIZE_MESSAGE = '''
         case {id}: {{
-            {db_name}_{name_m}_t* msg = ({db_name}_{name_m}_t*)(devices->raw);
+            {db_name}_{name_m}_t* msg = ({db_name}_{name_m}_t*)(device->message);
             {db_name}::{name_m_U}* proto_msg = pack->add_{proto_name}();
 {signals}
 #ifdef CANLIB_TIMESTAMP

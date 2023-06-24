@@ -104,13 +104,18 @@ extern "C" {{
 
 #define {database_name}_MESSAGE_COUNT {msg_count}
 
+#ifndef CANLIB_DEVICE_T
+#define CANLIB_DEVICE_T
 typedef struct {{
     void* message;
-    void* _converted=NULL;
-    void* _raw=NULL;
-    int _size_raw=0;
-    int _size_converted=0;
+    void* _converted;
+    void* _raw;
+    int _size_raw;
+    int _size_converted;
 }} device_t;
+void device_init(device_t *device);
+void device_free(device_t *device);
+#endif // CANLIB_DEVICE_T
 
 void {database_name}_devices_deserialize_from_id(
     device_t* device,
@@ -402,6 +407,23 @@ MESSAGE_INDEX = '''#define {database_name}_{message_name}_INDEX {index}
 '''
 
 DEVICES_DEFINITIONS = '''
+void device_init(device_t *device) {{
+    device->message = NULL;
+    device->_converted = NULL;
+    device->_raw = NULL;
+    device->_size_raw = 0;
+    device->_size_converted = 0;
+}}
+void device_free(device_t *device) {{
+    free(device->_raw);
+    free(device->_converted);
+    device->message = NULL;
+    device->_raw = NULL;
+    device->_converted = NULL;
+    device->_size_raw = 0;
+    device->_size_converted = 0;
+}}
+
 void {database_name}_devices_deserialize_from_id(
     device_t* device,
     uint16_t message_id,
