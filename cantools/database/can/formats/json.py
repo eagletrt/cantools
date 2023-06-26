@@ -203,9 +203,9 @@ def load_string(string: str, strict: bool = True,
         if 'description' in message:
             comment = message['description']
         endianness = 'little_endian'
-        if 'endianness' in message:
-            if message['endianness'] == 'bigAss':
-                endianness = 'big_endian'
+        #if 'endianness' in message:
+            #if message['endianness'] == 'bigAss':
+                #endianness = 'big_endian'
         id = None
         msg_name = message['name']
         topic_name = None
