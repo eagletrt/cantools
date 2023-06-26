@@ -168,8 +168,11 @@ def get_signal(name, signal, offset: int, types, endianness):
                 type = i
                 break
     
+    start = offset
+    if endianness == 'big_endian':
+        start = offset+7
     
-    return (offset+type, [Signal(name, offset, type, is_float=False, minimum=minimum, maximum=maximum, offset=(minimum), scale=precision, is_signed=is_signed,
+    return (offset+type, [Signal(name, start, type, is_float=False, minimum=minimum, maximum=maximum, offset=(minimum), scale=precision, is_signed=is_signed,
                             decimal=Decimal(precision, (minimum), minimum, maximum), choices=choices, byte_order=endianness)])
 
 def get_reserved_ids(db, messages) -> set:
@@ -203,9 +206,9 @@ def load_string(string: str, strict: bool = True,
         if 'description' in message:
             comment = message['description']
         endianness = 'little_endian'
-        #if 'endianness' in message:
-            #if message['endianness'] == 'bigAss':
-                #endianness = 'big_endian'
+        if 'endianness' in message:
+            if message['endianness'] == 'bigAss':
+                endianness = 'big_endian'
         id = None
         msg_name = message['name']
         topic_name = None
