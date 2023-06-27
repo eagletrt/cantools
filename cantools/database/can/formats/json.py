@@ -117,8 +117,11 @@ def get_signal(name, signal, offset: int, types, endianness):
     is_float = False
     choices = None
     is_signed = False
+    optimize = True
     precision = 1
     if isinstance(signal, dict):
+        optimize = signal.get("optimize", True)
+        is_signed = signal.get("signed", False)
         if signal['type'][:5] == 'float':
             is_float = True
         if 'force' in signal:
@@ -161,7 +164,8 @@ def get_signal(name, signal, offset: int, types, endianness):
     if maximum < minimum:
         maximum, minimum = minimum, maximum
     if is_float:
-        precision = abs(maximum-minimum) / ((1<<type)-1)
+        if optimize:
+            precision = abs(maximum-minimum) / ((1<<type)-1)
     if is_float:
         for i in types_size:
             if i >= type:
