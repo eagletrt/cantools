@@ -174,8 +174,8 @@ int {database_name}_id_from_index(int index);
 {unions}
 
 
-#define {database_name}_MAX_STRUCT_SIZE_RAW sizeof(_{database_name}_all_structs_raw)
-#define {database_name}_MAX_STRUCT_SIZE_CONVERSION sizeof(_{database_name}_all_structs_conversion)
+#define {database_name}_MAX_STRUCT_SIZE_RAW sizeof(_{database_name}_all_struct_raw)
+#define {database_name}_MAX_STRUCT_SIZE_CONVERSION sizeof(_{database_name}_all_struct_converted)
 
 #ifdef __cplusplus
 }}
