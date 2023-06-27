@@ -116,6 +116,7 @@ typedef struct {{
 void device_init(device_t *device);
 void device_preallocate(device_t *device, int bytes);
 void device_free(device_t *device);
+void device_set_address(device_t *device, void* raw, size_t raw_size, void *converted, size_t converted_size);
 #endif // CANLIB_DEVICE_T
 
 #ifdef CANLIB_DEVICE_IMPLEMENTATION
@@ -145,6 +146,12 @@ void device_free(device_t *device) {{
     device->_size_raw = 0;
     device->_size_converted = 0;
 }}
+void device_set_address(device_t *device, void* raw, size_t raw_size, void *converted, size_t converted_size) {{
+    device->_raw = raw;
+    device->_converted = converted;
+    device->_size_raw = raw_size;
+    device->_size_converted = converted_size;
+}}
 #endif // CANLIB_DEVICE_IMPLEMENTATION
 
 void {database_name}_devices_deserialize_from_id(
@@ -162,6 +169,13 @@ int {database_name}_id_from_index(int index);
 
 {structs}
 {declarations}
+
+
+{unions}
+
+
+#define {database_name}_MAX_STRUCT_SIZE_RAW sizeof(_{database_name}_all_structs_raw)
+#define {database_name}_MAX_STRUCT_SIZE_CONVERSION sizeof(_{database_name}_all_structs_conversion)
 
 #ifdef __cplusplus
 }}
@@ -946,6 +960,13 @@ INDEX_FROM_ID = '''int {database_name}_index_from_id(uint16_t id) {{
 '''
 MSG_NAME_FROM_ID_CONTENT = '''\t\tcase {}: return sprintf(buffer, "%s", "{}");\n'''
 
+UNION = '''typedef union CANLIB_PARKING {{
+{messages}
+}} {name};
+'''
+MESSAGE_UNION = '''    {type_name} _{name};
+'''
+
 class Signal:
 
     def __init__(self, signal, message_name, database_name):
@@ -1168,12 +1189,21 @@ class Message:
         self.topic_name = message.topic_name    #json
         self.topic_id = message.topic_id        #json
         self.snake_name = camel_to_snake_case(self.name)
+        self.database_name = database_name
         self.signals = [Signal(signal, self.snake_name, database_name)for signal in message.signals]
         self.has_conversions = False
         for sig in self.signals:
             if sig.is_float_conversion:
                 self.has_conversions = True
                 break
+    
+    @property
+    def struct_name_converted(self):
+        return f"{self.database_name}_{self.snake_name}_converted_t"
+    @property
+    def struct_name_raw(self):
+        return f"{self.database_name}_{self.snake_name}_t"
+
 
     def __getattr__(self, name):
         return getattr(self._message, name)
@@ -1963,6 +1993,17 @@ def _get_raw_to_conversion_head(database_name, message):
                                                                             signals = "".join(signals))
     return message_raw_to_conversion[:-2] + "\n)"
 
+def _generate_unions(database_name, messages):
+    raw = ''
+    converted = ''
+    for msg in messages:
+        raw += MESSAGE_UNION.format(type_name=msg.struct_name_raw, name=msg.snake_name)
+        converted += MESSAGE_UNION.format(type_name=msg.struct_name_converted, name=msg.snake_name)
+    raw = UNION.format(messages=raw, name=f'_{database_name}_all_struct_raw')
+    converted = UNION.format(messages=converted, name=f'_{database_name}_all_struct_converted')
+
+    return raw + "\n" + converted
+
 def _generate_declarations(database_name, messages: List[Message], floating_point_numbers, use_float, node_name):
     declarations = []
 
@@ -2473,6 +2514,7 @@ def generate(database,
                                                       node_name)
     helpers = _generate_helpers(helper_kinds)
     message_indexes = _generate_indexes(database_name, messages)
+    unions = _generate_unions(database_name, messages)
 
     header = HEADER_FMT.format(version=__version__,
                                date=date,
@@ -2488,6 +2530,7 @@ def generate(database,
                                msg_count=len(messages),
                                structs=structs,
                                declarations=declarations,
+                               unions=unions,
                                timestamp=int(time.time()))
 
     source = SOURCE_FMT.format(version=__version__,
