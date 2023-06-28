@@ -139,7 +139,7 @@ void {network}_watchdog_timeout({network}_watchdog *watchdog, canlib_watchdog_ti
 MESSAGE_TIMEOUT = '''
     if (
         CANLIB_BITTEST_ARRAY(watchdog->activated, {index})
-        && timestamp - watchdog->last_reset[{index}] > {interval} + CANLIB_INTERVAL_THRESHOLD
+        && timestamp - watchdog->last_reset[{index}] > {interval} * 3
     ) {{
         CANLIB_BITSET_ARRAY(watchdog->timeout, {index});
     }}
