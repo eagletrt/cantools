@@ -192,12 +192,12 @@ def generate_watchdog(database, database_name):
                                     msg_byte_count=(len(messages)+7)//8)
     body += _generate_intervals_from_id(database_name, messages)
     body += _generate_index_from_id(database_name, messages)
-    body += '#ifdef primary_WATCHDOG_IMPLEMENTATION\n'
+    body += f'#ifdef {database_name}_WATCHDOG_IMPLEMENTATION\n'
     body += WATCHDOG_NEW.format(network=database_name)
     body += WATCHDOG_FREE.format(network=database_name)
     body += WATCHDOG_RESET.format(network=database_name, msg_count=len(messages))
     body += WATCHDOG_RESET_ALL.format(network=database_name)
     body += _generate_timeouts(database_name, messages)
-    body += '#endif // primary_WATCHDOG_IMPLEMENTATION\n'
+    body += f'#endif // {database_name}_WATCHDOG_IMPLEMENTATION\n'
     return WATCHDOG.format(body=body, network=database_name)
     
