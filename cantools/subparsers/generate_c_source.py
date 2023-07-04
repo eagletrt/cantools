@@ -94,13 +94,14 @@ def generate_from_db(dbase, database_name, no_floating_point_numbers = False, ge
     fuzzer_filename_c = 'network_fuzzer.c'
     fuzzer_filename_mk = 'network_fuzzer.mk'
     file_name_watchdog = database_name + '_watchdog.h'
+    file_name_watchdog_implementation = database_name + '_watchdog.c'
     filename_proto = database_name + ".proto"
     filename_proto_interface = database_name + "_proto_interface.h"
     filename_dbc = database_name + '.dbc'
 
     proto = generate_proto(dbase, database_name)
     proto_interface = generate_proto_interface(dbase, database_name)
-    watchdog = generate_watchdog(dbase, database_name)
+    watchdog, watchdog_implementation = generate_watchdog(dbase, database_name)
     
     header, source, fuzzer_source, fuzzer_makefile = generate(
         dbase,
@@ -144,6 +145,11 @@ def generate_from_db(dbase, database_name, no_floating_point_numbers = False, ge
 
     with open(path_watchdog, 'w') as fout:
         fout.write(watchdog)
+    
+    path_watchdog_implementation = os.path.join(output_directory+libpath, file_name_watchdog_implementation)
+
+    with open(path_watchdog_implementation, 'w') as fout:
+        fout.write(watchdog_implementation)
 
     if generate_dbc:
         os.makedirs(output_directory+dbcpath, exist_ok=True)

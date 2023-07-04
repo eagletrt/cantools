@@ -8,6 +8,8 @@ WATCHDOG = '''#ifndef {network}_WATCHDOG_H
 #define {network}_WATCHDOG_H
 
 #include <inttypes.h>
+#include <string.h>
+#include <stdlib.h>
 
 #ifdef __cplusplus
 extern "C" {{
@@ -66,8 +68,14 @@ typedef void (*canlib_watchdog_callback)(int);
 #endif // {network}_NETWORK_H
 '''
 
+WATCHDOG_IMPLEMENTATION = '''#include "{network}_watchdog.h"
+
+{body}
+
+'''
+
 INTERVAL_FROM_ID = '''
-static int {network}_watchdog_interval_from_id(uint16_t message_id) {{
+int {network}_watchdog_interval_from_id(uint16_t message_id) {{
     switch (message_id) {{
 {messages}
     }}
@@ -75,7 +83,7 @@ static int {network}_watchdog_interval_from_id(uint16_t message_id) {{
 }}
 '''
 INDEX_FROM_ID = '''
-static int {network}_watchdog_index_from_id(uint16_t message_id) {{
+int {network}_watchdog_index_from_id(uint16_t message_id) {{
     switch (message_id) {{
 {messages}
     }}
@@ -90,25 +98,12 @@ typedef struct {{
     canlib_watchdog_timestamp last_reset[{msg_count}];
 }} {network}_watchdog;
 
-
-{network}_watchdog* {network}_watchdog_new();
+int {network}_watchdog_interval_from_id(uint16_t message_id);
+int {network}_watchdog_index_from_id(uint16_t message_id);
 void {network}_watchdog_free({network}_watchdog *watchdog);
 void {network}_watchdog_reset({network}_watchdog *watchdog, canlib_message_id id, canlib_watchdog_timestamp timestamp);
 void {network}_watchdog_reset_all({network}_watchdog *watchdog, canlib_watchdog_timestamp timestamp);
 void {network}_watchdog_timeout({network}_watchdog *watchdog, canlib_watchdog_timestamp timestamp);
-'''
-
-WATCHDOG_NEW = '''
-{network}_watchdog* {network}_watchdog_new() {{
-    {network}_watchdog *watchdog = ({network}_watchdog*)malloc(sizeof({network}_watchdog));
-    if (watchdog == NULL) {{
-        return NULL;
-    }}
-    memset(watchdog->activated, 0, sizeof(watchdog->activated));
-    memset(watchdog->timeout, 0, sizeof(watchdog->timeout));
-    memset(watchdog->last_reset, 0, sizeof(watchdog->last_reset));
-    return watchdog;
-}}
 '''
 
 WATCHDOG_FREE = '''
@@ -190,14 +185,12 @@ def generate_watchdog(database, database_name):
     body += WATCHDOG_DEFINITION.format(network=database_name,
                                     msg_count=len(messages),
                                     msg_byte_count=(len(messages)+7)//8)
-    body += _generate_intervals_from_id(database_name, messages)
-    body += _generate_index_from_id(database_name, messages)
-    body += f'#ifdef {database_name}_WATCHDOG_IMPLEMENTATION\n'
-    body += WATCHDOG_NEW.format(network=database_name)
-    body += WATCHDOG_FREE.format(network=database_name)
-    body += WATCHDOG_RESET.format(network=database_name, msg_count=len(messages))
-    body += WATCHDOG_RESET_ALL.format(network=database_name)
-    body += _generate_timeouts(database_name, messages)
-    body += f'#endif // {database_name}_WATCHDOG_IMPLEMENTATION\n'
-    return WATCHDOG.format(body=body, network=database_name)
+    body_implementation = _generate_intervals_from_id(database_name, messages)
+    body_implementation += _generate_index_from_id(database_name, messages)
+    body_implementation += WATCHDOG_FREE.format(network=database_name)
+    body_implementation += WATCHDOG_RESET.format(network=database_name, msg_count=len(messages))
+    body_implementation += WATCHDOG_RESET_ALL.format(network=database_name)
+    body_implementation += _generate_timeouts(database_name, messages)
+    implementation = WATCHDOG_IMPLEMENTATION.format(network=database_name, body=body_implementation)
+    return (WATCHDOG.format(body=body, network=database_name), implementation)
     
