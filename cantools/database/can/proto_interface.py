@@ -257,6 +257,7 @@ class canlib_circular_buffer {
   const T& start() const;
   T inline first() const;
   T inline last() const;
+  T& operator[](IT index);
   const T& operator[](IT index) const;
   IT inline size() const;
   IT inline available() const;
@@ -356,6 +357,12 @@ T inline canlib_circular_buffer<T, S, IT>::last() const {
 template <typename T, size_t S, typename IT>
 const T& canlib_circular_buffer<T, S, IT>::start() const {
   return buffer[1];
+}
+
+template <typename T, size_t S, typename IT>
+T& canlib_circular_buffer<T, S, IT>::operator[](IT index) {
+  if (index >= count) return *tail;
+  return *(buffer + ((head - buffer + index) % capacity));
 }
 
 template <typename T, size_t S, typename IT>
