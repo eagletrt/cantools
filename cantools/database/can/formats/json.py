@@ -98,7 +98,7 @@ def generate_topics_id(db):
     for message in db['messages']:
         if 'topic' in message:
             topics.add(message['topic'])
-    ids = {topic: index for index, topic in enumerate(topics)}
+    ids = {topic: index for index, topic in enumerate(sorted(topics))}
 
     if len(ids) >= 2**TOPIC_BITS:
         raise Exception(f"No more topics (>{2**TOPIC_BITS})")
