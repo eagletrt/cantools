@@ -67,6 +67,9 @@ extern "C" {{
 #define CANLIB_BUILD_TIME {timestamp}
 #endif // CANLIB_BUILD
 
+#define min(a,b) (((a) < (b)) ? (a) : (b))
+#define max(a,b) (((a) > (b)) ? (a) : (b))
+
 #ifndef CANLIB_PARKING
 /* We know it's PACKING but PARKING sounds a bit better ;) */
 #if defined(__MINGW32__)
@@ -1751,6 +1754,11 @@ def _generate_encode_decode(message, use_float):
         else:
             encoding = f'value / {formatted_scale}'
             decoding = f'({floating_point_type})value * {formatted_scale}'
+
+        if signal.maximum_value != None:
+            encoding = f'min({signal.maximum_value}, {encoding})'
+        if signal.minimum_value != None:
+            encoding = f'max({signal.minimum_value}, {encoding})'
 
         encode_decode.append((encoding, decoding))
 
