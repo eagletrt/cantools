@@ -8,6 +8,7 @@ from ..database.can.c_source import camel_to_snake_case
 from ..database.can.proto import generate_proto
 from ..database.can.proto_interface import generate_proto_interface
 from ..database.can.watchdog import generate_watchdog
+from ..database.can.c_utils import generate_c_utils
 
 LIBPATH = '/lib/{network}/'
 PROTOPATH = '/proto/{network}/'
@@ -98,10 +99,13 @@ def generate_from_db(dbase, database_name, no_floating_point_numbers = False, ge
     filename_proto = database_name + ".proto"
     filename_proto_interface = database_name + "_proto_interface.h"
     filename_dbc = database_name + '.dbc'
+    filename_utils_c = database_name + '_utils_c.h'
+    filename_utils_c_implementation = database_name + '_utils_c.c'
 
     proto = generate_proto(dbase, database_name)
     proto_interface = generate_proto_interface(dbase, database_name)
     watchdog, watchdog_implementation = generate_watchdog(dbase, database_name)
+    utils_c, utils_c_implementation = generate_c_utils(database_name, dbase)
     
     header, source, fuzzer_source, fuzzer_makefile = generate(
         dbase,
@@ -150,6 +154,16 @@ def generate_from_db(dbase, database_name, no_floating_point_numbers = False, ge
 
     with open(path_watchdog_implementation, 'w') as fout:
         fout.write(watchdog_implementation)
+
+    path_utils_c = os.path.join(output_directory+libpath, filename_utils_c)
+
+    with open(path_utils_c, 'w') as fout:
+        fout.write(utils_c)
+
+    path_utils_c_implementation = os.path.join(output_directory+libpath, filename_utils_c_implementation)
+
+    with open(path_utils_c_implementation, 'w') as fout:
+        fout.write(utils_c_implementation)
 
     if generate_dbc:
         os.makedirs(output_directory+dbcpath, exist_ok=True)
