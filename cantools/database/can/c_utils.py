@@ -1,16 +1,16 @@
 
 
 
-type_to_specifier = {"uint8_t": '%" PRIu8  \n\t\t\t"',
-                    "uint16_t": '%" PRIu16 \n\t\t\t"',
-                    "uint32_t": '%" PRIu32 \n\t\t\t"',
-                    "uint64_t": '%" PRIu64 \n\t\t\t"',
-                    "int8_t":   '%" PRIi8  \n\t\t\t"',
-                    "int16_t":  '%" PRIi16 \n\t\t\t"',
-                    "int32_t":  '%" PRIi32 \n\t\t\t"',
-                    "int64_t":  '%" PRIi64 \n\t\t\t"',
-                    "float": '""%f"\n\t\t\t"',
-                    "double": '""%f"\n\t\t\t"'}
+type_to_specifier = {"uint8_t": '%" SCNu8  \n\t\t\t"',
+                    "uint16_t": '%" SCNu16 \n\t\t\t"',
+                    "uint32_t": '%" SCNu32 \n\t\t\t"',
+                    "uint64_t": '%" SCNu64 \n\t\t\t"',
+                    "int8_t":   '%" SCNi8  \n\t\t\t"',
+                    "int16_t":  '%" SCNi16 \n\t\t\t"',
+                    "int32_t":  '%" SCNi32 \n\t\t\t"',
+                    "int64_t":  '%" SCNi64 \n\t\t\t"',
+                    "float":    '%f"       \n\t\t\t"',
+                    "double":   '%f"       \n\t\t\t"'}
 
 UTILS = '''#ifndef {network}_UTILS_H
 #define {network}_UTILS_H
@@ -71,8 +71,10 @@ SERIALIZE_MSG = '''\tcase {id}:
 \t{{
 \t\t{msg_name}_t tmp;
 \t\t{msg_name}_converted_t tmp_converted;
-\t\tsscanf(s, "{form}",
+{declarations}
+\t\tsscanf(s, "{form},
 {args});
+{assign}
 \t\t{msg_name}_conversion_to_raw_struct(&tmp, &tmp_converted);
 \t\treturn {msg_name}_pack(data, &tmp, size);
 \t}}
@@ -93,10 +95,7 @@ def _is_float_conversion(signal):
 
 def _type_name(signal):
     if _is_float_conversion(signal):
-        if signal.length == 32:
-            type_name = 'float'
-        else:
-            type_name = 'double'
+        type_name = 'float'
     else:
         type_name = f'int{_type_length(signal)}_t'
 
@@ -162,12 +161,17 @@ def _generate_serialize_from_id(database_name, messages):
             continue
         form = ''
         args = ''
+        assign = ''
+        declarations = ''
         msg_name = f'{database_name}_{msg.name.lower()}'
         for signal in msg.signals:
+            declarations += f'\t\t{_type_name(signal)} r_{signal.name.lower()};\n'
             form += type_to_specifier[_type_name(signal)]
-            args += f'\t\t\ttmp.{signal.name.lower()},\n'
+            args += f'\t\t\t&r_{signal.name.lower()},\n'
+            assign += f'\t\ttmp_converted.{signal.name.lower()} = r_{signal.name.lower()};\n'
         args = args[:-2]
-        ret += SERIALIZE_MSG.format(id=msg.frame_id, msg_name=msg_name, form=form, args=args)
+        form = form[:-5]
+        ret += SERIALIZE_MSG.format(id=msg.frame_id, msg_name=msg_name, form=form, args=args, assign=assign, declarations=declarations)
     return SERIALIZE.format(database_name, ret)
 
 def _generate_string_fields_from_id(database_name, messages):
@@ -183,7 +187,7 @@ def _generate_string_fields_from_id(database_name, messages):
 
 def generate_c_utils(database_name, messages):
     header = f'#ifndef {database_name.upper()}_UTILS_C_H\n\n#define {database_name.upper()}_UTILS_C_H\n\n'
-    header += f'#include <cstddef>\n#include "{database_name}_network.h"\n\n'
+    header += f'#include <stddef.h>\n#include "{database_name}_network.h"\n\n'
     header += _generate_defines(database_name, messages) + _generate_enums(database_name, messages)
     header += f'int {database_name}_fields_string_from_id(int id, char **v, size_t fields_size, size_t string_size);\n'
     header += f'int {database_name}_enum_fields(int enum_id, char **v, size_t fields_size, size_t string_size);\n'
