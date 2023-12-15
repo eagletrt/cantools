@@ -48,6 +48,15 @@ FIELDS_FROM_ID = '''int {}_fields_string_from_id(int id, char **v, size_t fields
     return 0;
 }}
 '''
+N_FIELDS_FROM_ID = '''int {}_n_fields_from_id(int id)
+{{
+	switch(id)
+    {{
+{}
+    }}
+    return 0;
+}}
+'''
 
 ENUM_FIELDS = '''int {}_enum_fields(int enum_id, char **v, size_t fields_size, size_t string_size)
 {{
@@ -66,7 +75,17 @@ SERIALIZE = '''int {}_serialize_from_id(int id, char *s, uint8_t *data, size_t s
 {}
     }}
     return 0;
-}}'''
+}}
+'''
+FIELDS_TYPES = '''int {}_fields_types_from_id(int id, int* fields_types, int fields_types_size)
+{{
+    switch(id)
+    {{
+{}
+    }}
+    return 0;
+}}
+'''
 SERIALIZE_MSG = '''\tcase {id}:
 \t{{
 \t\t{msg_name}_t tmp;
@@ -116,6 +135,11 @@ def _generate_defines(database_name, messages):
     
     return ret
 
+def _get_type(signal, msg_name, database_name):
+    if signal.choices != None:
+        return f'e_{database_name}_{msg_name}_{signal.name}'.lower()
+    return f'e_{database_name}_{_type_name(signal)}'
+
 def _generate_enums(database_name, messages):
     types = set()
     enums = set()
@@ -123,9 +147,9 @@ def _generate_enums(database_name, messages):
     for msg in messages.messages:
         for signal in msg.signals:
             if signal.choices != None:
-                enums.add(f'e_{database_name}_{msg.name}_{signal.name}'.lower())
+                enums.add(_get_type(signal, msg.name, database_name))
             else:
-                types.add('e_'+_type_name(signal))
+                types.add(_get_type(signal, msg.name, database_name))
     
     size = len(types)
 
@@ -184,6 +208,25 @@ def _generate_string_fields_from_id(database_name, messages):
         ret += FIELDS_MESSAGE.format(msg.frame_id, len(msg.signals), tmp)
     return FIELDS_FROM_ID.format(database_name, ret)
 
+def _get_n_fields(database_name, messages):
+    body = ''
+    for msg in messages.messages:
+        body += f'\t\tcase {msg.frame_id}: return {len(msg.signals)};\n'
+    body = body[:-1]
+    return N_FIELDS_FROM_ID.format(database_name, body)
+
+def _fields_types_from_id(database_name, messages):
+    body = ''
+    for msg in messages.messages:
+        if len(msg.signals) == 0:
+            continue
+        body += f'\tcase {msg.frame_id}:\n'
+        body += f'\t\tif(fields_types_size < {len(msg.signals)}) return 0;\n'
+        for i, signal in enumerate(msg.signals):
+            body += f'\t\tfields_types[{i}] = {_get_type(signal, msg.name, database_name)};\n'
+        body += f'\t\treturn {len(msg.signals)};\n'
+    return FIELDS_TYPES.format(database_name, body)
+
 
 def generate_c_utils(database_name, messages):
     header = f'#ifndef {database_name.upper()}_UTILS_C_H\n\n#define {database_name.upper()}_UTILS_C_H\n\n'
@@ -192,11 +235,15 @@ def generate_c_utils(database_name, messages):
     header += f'int {database_name}_fields_string_from_id(int id, char **v, size_t fields_size, size_t string_size);\n'
     header += f'int {database_name}_enum_fields(int enum_id, char **v, size_t fields_size, size_t string_size);\n'
     header += f'int {database_name}_serialize_from_id(int id, char *s, uint8_t *data, size_t size);\n'
+    header += f'int {database_name}_n_fields_from_id(int id);\n'
+    header += f'int {database_name}_fields_types_from_id(int id, int* fields_types, int fields_types_size);\n'
     header += '\n\n#endif'
     implementation = f'#include "{database_name}_utils_c.h"\n\n\n'
     implementation += _generate_string_fields_from_id(database_name, messages)
     implementation += _generate_enums_fields(database_name, messages)
     implementation += _generate_serialize_from_id(database_name, messages)
+    implementation += _get_n_fields(database_name, messages)
+    implementation += _fields_types_from_id(database_name, messages)
 
     return header, implementation
 
