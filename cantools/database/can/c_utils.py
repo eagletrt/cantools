@@ -1,16 +1,16 @@
 
 
 
-type_to_specifier = {"uint8_t": '%" SCNu8  \n\t\t\t"',
-                    "uint16_t": '%" SCNu16 \n\t\t\t"',
-                    "uint32_t": '%" SCNu32 \n\t\t\t"',
-                    "uint64_t": '%" SCNu64 \n\t\t\t"',
-                    "int8_t":   '%" SCNi8  \n\t\t\t"',
-                    "int16_t":  '%" SCNi16 \n\t\t\t"',
-                    "int32_t":  '%" SCNi32 \n\t\t\t"',
-                    "int64_t":  '%" SCNi64 \n\t\t\t"',
-                    "float":    '%f"       \n\t\t\t"',
-                    "double":   '%f"       \n\t\t\t"'}
+type_to_specifier = {"uint8_t": ' %" SCNu8  \n\t\t\t"',
+                    "uint16_t": ' %" SCNu16 \n\t\t\t"',
+                    "uint32_t": ' %" SCNu32 \n\t\t\t"',
+                    "uint64_t": ' %" SCNu64 \n\t\t\t"',
+                    "int8_t":   ' %" SCNi8  \n\t\t\t"',
+                    "int16_t":  ' %" SCNi16 \n\t\t\t"',
+                    "int32_t":  ' %" SCNi32 \n\t\t\t"',
+                    "int64_t":  ' %" SCNi64 \n\t\t\t"',
+                    "float":    ' %f"       \n\t\t\t"',
+                    "double":   ' %f"       \n\t\t\t"'}
 
 UTILS = '''#ifndef {network}_UTILS_H
 #define {network}_UTILS_H
@@ -68,7 +68,7 @@ ENUM_FIELDS = '''int {}_enum_fields(int enum_id, char **v, size_t fields_size, s
 }}
 '''
 
-SERIALIZE = '''int {}_serialize_from_id(int id, char *s, uint8_t *data, size_t size)
+SERIALIZE = '''int {}_serialize_from_id(int id, char *s, uint8_t *data, size_t *size)
 {{
     switch(id)
     {{
@@ -95,7 +95,8 @@ SERIALIZE_MSG = '''\tcase {id}:
 {args});
 {assign}
 \t\t{msg_name}_conversion_to_raw_struct(&tmp, &tmp_converted);
-\t\treturn {msg_name}_pack(data, &tmp, size);
+\t\t*size = {msg_size};
+\t\treturn {msg_name}_pack(data, &tmp, {msg_size});
 \t}}
 '''
 
@@ -188,6 +189,7 @@ def _generate_serialize_from_id(database_name, messages):
         assign = ''
         declarations = ''
         msg_name = f'{database_name}_{msg.name.lower()}'
+        msg_size = f'{database_name.upper()}_{msg.name.upper()}_BYTE_SIZE'
         for signal in msg.signals:
             declarations += f'\t\t{_type_name(signal)} r_{signal.name.lower()};\n'
             form += type_to_specifier[_type_name(signal)]
@@ -195,7 +197,7 @@ def _generate_serialize_from_id(database_name, messages):
             assign += f'\t\ttmp_converted.{signal.name.lower()} = r_{signal.name.lower()};\n'
         args = args[:-2]
         form = form[:-5]
-        ret += SERIALIZE_MSG.format(id=msg.frame_id, msg_name=msg_name, form=form, args=args, assign=assign, declarations=declarations)
+        ret += SERIALIZE_MSG.format(id=msg.frame_id, msg_name=msg_name, msg_size=msg_size, form=form, args=args, assign=assign, declarations=declarations)
     return SERIALIZE.format(database_name, ret)
 
 def _generate_string_fields_from_id(database_name, messages):
@@ -234,7 +236,7 @@ def generate_c_utils(database_name, messages):
     header += _generate_defines(database_name, messages) + _generate_enums(database_name, messages)
     header += f'int {database_name}_fields_string_from_id(int id, char **v, size_t fields_size, size_t string_size);\n'
     header += f'int {database_name}_enum_fields(int enum_id, char **v, size_t fields_size, size_t string_size);\n'
-    header += f'int {database_name}_serialize_from_id(int id, char *s, uint8_t *data, size_t size);\n'
+    header += f'int {database_name}_serialize_from_id(int id, char *s, uint8_t *data, size_t *size);\n'
     header += f'int {database_name}_n_fields_from_id(int id);\n'
     header += f'int {database_name}_fields_types_from_id(int id, int* fields_types, int fields_types_size);\n'
     header += '\n\n#endif'
