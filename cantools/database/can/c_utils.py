@@ -1,16 +1,16 @@
 
 
 
-type_to_specifier = {"uint8_t": ' %" SCNu8  \n\t\t\t"',
-                    "uint16_t": ' %" SCNu16 \n\t\t\t"',
-                    "uint32_t": ' %" SCNu32 \n\t\t\t"',
-                    "uint64_t": ' %" SCNu64 \n\t\t\t"',
-                    "int8_t":   ' %" SCNi8  \n\t\t\t"',
-                    "int16_t":  ' %" SCNi16 \n\t\t\t"',
-                    "int32_t":  ' %" SCNi32 \n\t\t\t"',
-                    "int64_t":  ' %" SCNi64 \n\t\t\t"',
-                    "float":    ' %f"       \n\t\t\t"',
-                    "double":   ' %f"       \n\t\t\t"'}
+type_to_specifier = {"uint8_t": '%" SCNu8 ","  \n\t\t\t"',
+                    "uint16_t": '%" SCNu16 "," \n\t\t\t"',
+                    "uint32_t": '%" SCNu32 "," \n\t\t\t"',
+                    "uint64_t": '%" SCNu64 "," \n\t\t\t"',
+                    "int8_t":   '%" SCNi8 ","  \n\t\t\t"',
+                    "int16_t":  '%" SCNi16 "," \n\t\t\t"',
+                    "int32_t":  '%" SCNi32 "," \n\t\t\t"',
+                    "int64_t":  '%" SCNi64 "," \n\t\t\t"',
+                    "float":    '%f,"       \n\t\t\t"',
+                    "double":   '%f,"       \n\t\t\t"'}
 
 UTILS = '''#ifndef {network}_UTILS_H
 #define {network}_UTILS_H
@@ -194,7 +194,10 @@ def _generate_serialize_from_id(database_name, messages):
             declarations += f'\t\t{_type_name(signal)} r_{signal.name.lower()};\n'
             form += type_to_specifier[_type_name(signal)]
             args += f'\t\t\t&r_{signal.name.lower()},\n'
-            assign += f'\t\ttmp_converted.{signal.name.lower()} = r_{signal.name.lower()};\n'
+            type = _type_name(signal)
+            if signal.choices != None:
+                type = f'{msg_name}_{signal.name.lower()}'
+            assign += f'\t\ttmp_converted.{signal.name.lower()} = ({type})r_{signal.name.lower()};\n'
         args = args[:-2]
         form = form[:-5]
         ret += SERIALIZE_MSG.format(id=msg.frame_id, msg_name=msg_name, msg_size=msg_size, form=form, args=args, assign=assign, declarations=declarations)
