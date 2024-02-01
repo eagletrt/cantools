@@ -857,8 +857,8 @@ ENUM_TO_STRING = '''int {database_name}_{message_name}_{signal_name}_enum_to_str
     {{
 {body}
     }}
-    sprintf(buffer, "_UNKNOWN_");
-    return 0;
+    sprintf(buffer, "CANLIB_UNKNOWN");
+    return -1;
 }}'''
 ENUM_TO_STRING_DECLARATION = '''int {database_name}_{message_name}_{signal_name}_enum_to_string({database_name}_{message_name}_{signal_name} value, char *buffer);\n'''
 
@@ -2367,10 +2367,10 @@ def _generate_definitions(database_name, messages: List[Message], floating_point
     definitions.append(MSG_NAME_FROM_ID.format(database_name=database_name, body=msg_name_from_id))
     definitions.append(INDEX_FROM_ID.format(database_name=database_name, body=index_from_id))
     definitions.append(ID_FROM_INDEX.format(database_name=database_name, body=id_from_index))
-    definitions.append(to_string_from_id + "}\n\treturn 0;\n}\n")
-    definitions.append(fields_from_id + "}\n\treturn 0;\n}\n")
-    definitions.append(to_string_file_from_id + "}\n\treturn 0;\n}\n")
-    definitions.append(fields_file_from_id + "}\n\treturn 0;\n}\n")
+    definitions.append(to_string_from_id + "}\n\treturn -1;\n}\n")
+    definitions.append(fields_from_id + "}\n\treturn -1;\n}\n")
+    definitions.append(to_string_file_from_id + "}\n\treturn -1;\n}\n")
+    definitions.append(fields_file_from_id + "}\n\treturn -1;\n}\n")
 
     definitions.append(DEVICES_DEFINITIONS.format(database_name=database_name,
                                                 devices_new_body=devices_new,
