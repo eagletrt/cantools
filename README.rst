@@ -4,16 +4,99 @@
 
 EAGLE
 =====
+cantools
+--------
+
+The old canlib allowed reading JSON files describing various messages sent over CAN in different networks and generating corresponding code. The code consisted of data structures to represent the messages and functions capable of converting the messages from binary format to these structures and vice versa. For various reasons, it was necessary to add the ability to read DBC files in addition to JSON files.
+It was decided to use `cantools <https://github.com/cantools/cantools>`__ as the starting point and add the functions present in canlib to it.
+
+Features:
+~~~~~~~~~
+- Importing various files (JSON, DBC, ...) into a single network
+- Generating code
+- Exporting a network to DBC
+
+Code Generation
+~~~~~~~~~~~~~~~~~~
+
+Normally, to generate and update the code for all, simply push to the eagletrt/can repository. If instead you want to generate the code locally, type the command:
+
+.. code:: bash
+
+   python3 -m cantools generate_c_source --use-float --infolder ./networks -o ./output_folder
+
+Example folder structure for networks:
+
+::
+
+   .
+   └── networks/
+       ├── network1/
+       │   └── a.dbc
+       ├── network2/
+       │   ├── a.json
+       │   └── b.json
+       └── network3/
+           ├── a.json
+           └── b.dbc
+
+Output folder structure:
+
+::
+
+   .
+   └── output_folder/
+       ├── lib/
+       │   ├── network1/
+       │   ├── network2/
+       │   └── network3/
+       └── proto/
+           ├── network1/
+           ├── network2/
+           └── network3/
+
+For example, the lib/network1/ folder will contain the following files:
+
+::
+
+   .
+   └── lib/network1/
+      ├── network1_network.c
+      ├── network1_network.h
+      ├── network1_utils_c.c
+      ├── network1_utils_c.h
+      ├── network1_watchdog.c
+      └── network1_watchdog.h
+
+While the proto/network1 folder contains:
+
+::
+
+   .
+   └── proto/network1/
+       ├── network1.proto
+       └── network1_proto_interface.h
+
+Exporting to DBC
+~~~~~~~~~~~~~~~~
+
+To generate the DBC file, simply add the ``--generate-dbc`` parameter to the code generation command:
+
+.. code:: bash
+
+   python3 -m cantools generate_c_source --use-float --generate-dbc --infolder ./networks -o ./output_folder
+
+The dbc files will be inside the ./output_folder/dbc directory.
+
+Importing from code
+~~~~~~~~~~~~~~~~~~~
+
 .. code-block:: python
 
    >>> import cantools
    >>> db = cantools.database.load_file('file.dbc')
    >>> db.add_json_file('file.json')
    >>> print(db.as_dbc_string())
-
-.. code-block:: bash
-
-   python3 -m cantools generate_c_source --use-float file.dbc
 
 About
 =====
