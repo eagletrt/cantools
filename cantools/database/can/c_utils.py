@@ -18,14 +18,19 @@ UTILS = '''#ifndef {network}_UTILS_H
 #include <inttypes.h>
 #include <string.h>
 #include <stdlib.h>
+#include <string.h>
+#include <stddef.h>
+#include "primary_network.h"
 
 #ifdef __cplusplus
 extern "C" {{
 #endif
 
-{defines}
-
 {body}
+
+#ifdef __cplusplus
+}}
+#endif
 
 #endif
 '''
@@ -179,6 +184,28 @@ def _generate_enums_fields(database_name, messages):
                 enum_id += 1
     return ENUM_FIELDS.format(database_name, body)
 
+def _generate_enum_fields_from_name(database_name, messages):
+    body = f'int {database_name}_enum_fields_from_name(const char *msg_name, const char *sgn_name, char **v)\n{{\n'
+    for msg in messages.messages:
+        tmp = f'\tif(!strcmp(msg_name, "{msg.name.upper()}"))\n\t{{\n'
+        contains_enum = False
+        for sgn in msg.signals:
+            if sgn.choices != None:
+                contains_enum = True
+                tmp += f'\t\tif(!strcmp(sgn_name, "{sgn.name.lower()}"))\n\t\t{{\n'
+                ind = 0
+                for c in sgn.choices:
+                    tmp += f'\t\t\tsprintf(v[{ind}], "{sgn.choices[c]}");\n'
+                    ind += 1
+                tmp += f'\t\t\treturn {ind};\n'
+                tmp += '\t\t}\n'
+        tmp += '\t}\n'
+        if contains_enum:
+            body += tmp
+    body += '\treturn 0;\n'
+    body += '}\n'
+    return body
+
 def _generate_serialize_from_id(database_name, messages):
     ret = ''
     for msg in messages.messages:
@@ -234,21 +261,24 @@ def _fields_types_from_id(database_name, messages):
 
 
 def generate_c_utils(database_name, messages):
-    header = f'#ifndef {database_name.upper()}_UTILS_C_H\n\n#define {database_name.upper()}_UTILS_C_H\n\n'
-    header += f'#include <stddef.h>\n#include "{database_name}_network.h"\n\n'
-    header += _generate_defines(database_name, messages) + _generate_enums(database_name, messages)
-    header += f'int {database_name}_fields_string_from_id(int id, char **v, size_t fields_size, size_t string_size);\n'
-    header += f'int {database_name}_enum_fields(int enum_id, char **v, size_t fields_size, size_t string_size);\n'
-    header += f'int {database_name}_serialize_from_id(int id, char *s, uint8_t *data, size_t *size);\n'
-    header += f'int {database_name}_n_fields_from_id(int id);\n'
-    header += f'int {database_name}_fields_types_from_id(int id, int* fields_types, int fields_types_size);\n'
-    header += '\n\n#endif'
+    #header = f'#ifndef {database_name.upper()}_UTILS_C_H\n\n#define {database_name.upper()}_UTILS_C_H\n\n'
+    #header += f'#include <stddef.h>\n#include "{database_name}_network.h"\n\n'
+    #header += '\n\n#endif'
+    body = _generate_defines(database_name, messages) + _generate_enums(database_name, messages)
+    body += f'int {database_name}_fields_string_from_id(int id, char **v, size_t fields_size, size_t string_size);\n'
+    body += f'int {database_name}_enum_fields(int enum_id, char **v, size_t fields_size, size_t string_size);\n'
+    body += f'int {database_name}_serialize_from_id(int id, char *s, uint8_t *data, size_t *size);\n'
+    body += f'int {database_name}_n_fields_from_id(int id);\n'
+    body += f'int {database_name}_fields_types_from_id(int id, int* fields_types, int fields_types_size);\n'
+    body += f'int {database_name}_enum_fields_from_name(const char *msg_name, const char *sgn_name, char **v);\n'
+    header = UTILS.format(network=database_name, body=body)
     implementation = f'#include "{database_name}_utils_c.h"\n\n\n'
     implementation += _generate_string_fields_from_id(database_name, messages)
     implementation += _generate_enums_fields(database_name, messages)
     implementation += _generate_serialize_from_id(database_name, messages)
     implementation += _get_n_fields(database_name, messages)
     implementation += _fields_types_from_id(database_name, messages)
+    implementation += _generate_enum_fields_from_name(database_name, messages)
 
     return header, implementation
 
