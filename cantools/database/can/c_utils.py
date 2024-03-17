@@ -143,12 +143,12 @@ def _get_type(signal, msg_name, database_name):
 
 def _generate_enums(database_name, messages):
     types = set()
-    enums = set()
+    enums = []
 
     for msg in messages.messages:
         for signal in msg.signals:
             if signal.choices != None:
-                enums.add(_get_type(signal, msg.name, database_name))
+                enums.append(_get_type(signal, msg.name, database_name))
             else:
                 types.add(_get_type(signal, msg.name, database_name))
     
