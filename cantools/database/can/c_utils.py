@@ -35,8 +35,8 @@ extern "C" {{
 #endif
 '''
 
-DEFINE_MSG = '#define {}_{}_string "{}_{}"\n'
-DEFINE_SIGNAL = '#define {}_{}_{}_string "{}_{}_{}"\n'
+DEFINE_MSG = '#define {} "{}"\n'
+DEFINE_SIGNAL = '#define {}_{} "{}_{}"\n'
 
 FIELDS_MESSAGE = '''\tcase {}:
 \t\tif({} > fields_size) return 1;
@@ -205,11 +205,10 @@ def _generate_defines(database_name, messages):
     ret = ''
     for msg in messages.messages:
         ret += "/* START */\n"
-        ret += DEFINE_MSG.format(database_name.lower(), msg.name.lower(), database_name.upper(), msg.name.upper()) + "\n"
+        ret += DEFINE_MSG.format(msg.name.upper(), msg.name.upper()) + "\n"
 
         for signal in msg.signals:
-            ret += DEFINE_SIGNAL.format(database_name.lower(), msg.name.lower(), signal.name.lower(), 
-                        database_name.upper(), msg.name.upper(), signal.name.upper())
+            ret += DEFINE_SIGNAL.format(msg.name.upper(), signal.name.upper(), msg.name.lower(), signal.name.lower())
         ret += "/* END */\n\n"
     
     return ret
@@ -309,7 +308,7 @@ def _generate_string_fields_from_id(database_name, messages):
         if(len(msg.signals) <= 0): continue
         tmp = ''
         for i, signal in enumerate(msg.signals):
-            tmp += FIELDS_STRING.format(i, f'{database_name}_{msg.name}_{signal.name}_string'.lower())
+            tmp += FIELDS_STRING.format(i, f'{msg.name}_{signal.name}'.upper())
         ret += FIELDS_MESSAGE.format(msg.frame_id, len(msg.signals), tmp)
     return FIELDS_FROM_ID.format(database_name, ret)
 
