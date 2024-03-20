@@ -105,6 +105,79 @@ SERIALIZE_MSG = '''\tcase {id}:
 \t}}
 '''
 
+COMMENT_FIELDS_STRING_FROM_ID = '''
+/**
+ * @brief get the name of the signals in the message
+ * 
+ * @param[in] id message id
+ * @param[out] v array of strings containing the name of the signals
+ * @param[in] fields_size maximum size of v
+ * @param[in] string_size maximum size of v[i]
+ * 
+ * @return 0 if ok 1 otherwise
+*/
+'''
+
+COMMENT_ENUM_FIELDS = '''
+/**
+ * @brief get the fields of an enum given the id of the enum (get the id from fields_types_from_id)
+ * 
+ * @param[in] enum_id the id of the enum, you can get it from fields_types_from_id
+ * @param[out] v array of strings containing the enum fields
+ * @param[in] fields_size maximum size of v
+ * @param[in] string_size maximum size of v[i]
+ * 
+ * @return 0 if ok 1 otherwise
+*/
+'''
+
+COMMENT_SERIALIZE_FROM_ID = '''
+/**
+ * @brief serialize to a data pointer from a message id
+ * 
+ * @param[in] id message id
+ * @param[in] s string containing the data to serialize (comma separated)
+ * @param[out] data pointer to the serialized data
+ * @param[out] size size of the message
+ * 
+ * @return Size of packed data, or negative error code.
+*/
+'''
+
+COMMENT_N_FIELDS_FROM_ID = '''
+/**
+ * @brief get the number of signals in the message
+ * 
+ * @param[in] id the id of the message
+ * 
+ * @return return the number of the signals
+*/
+'''
+
+COMMENT_FIELDS_TYPES_FROM_ID = '''
+/**
+ * @brief get the types of the signals in the message
+ * 
+ * @param[in] id the id of the message
+ * @param[out] fields_types fields_types[i] contains the type id of the signal i (must be already allocated)
+ * @param[in] fields_types_size max size of fields_types
+ * 
+ * @return the number of types set, 0 if the id is invalid or fields_types_size is too small
+*/
+'''
+
+COMMENT_ENUM_FIELDS_FROM_NAME = '''
+/**
+ * @brief get the fields of an enum given the name of the message and the name of the signal
+ * 
+ * @param[in] msg_name name of the message to find
+ * @param[in] sgn_name name of the signal to find
+ * @param[out] v array of strings containing the enum fields
+ * 
+ * @return the number of fields or 0 if the signal is not an enum
+*/
+'''
+
 def _type_length(signal):
     if signal.length <= 8:
         return 8
@@ -265,11 +338,17 @@ def generate_c_utils(database_name, messages):
     #header += f'#include <stddef.h>\n#include "{database_name}_network.h"\n\n'
     #header += '\n\n#endif'
     body = _generate_defines(database_name, messages) + _generate_enums(database_name, messages)
+    body += COMMENT_FIELDS_STRING_FROM_ID
     body += f'int {database_name}_fields_string_from_id(int id, char **v, size_t fields_size, size_t string_size);\n'
+    body += COMMENT_ENUM_FIELDS
     body += f'int {database_name}_enum_fields(int enum_id, char **v, size_t fields_size, size_t string_size);\n'
+    body += COMMENT_SERIALIZE_FROM_ID
     body += f'int {database_name}_serialize_from_id(int id, char *s, uint8_t *data, size_t *size);\n'
+    body += COMMENT_N_FIELDS_FROM_ID
     body += f'int {database_name}_n_fields_from_id(int id);\n'
+    body += COMMENT_FIELDS_TYPES_FROM_ID
     body += f'int {database_name}_fields_types_from_id(int id, int* fields_types, int fields_types_size);\n'
+    body += COMMENT_ENUM_FIELDS_FROM_NAME
     body += f'int {database_name}_enum_fields_from_name(const char *msg_name, const char *sgn_name, char **v);\n'
     header = UTILS.format(network=database_name, body=body)
     implementation = f'#include "{database_name}_utils_c.h"\n\n\n'
