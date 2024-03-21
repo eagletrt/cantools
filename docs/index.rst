@@ -9,7 +9,7 @@
 CAN BUS tools
 =============
 
-.. include:: ../README.rst
+.. include:: ../README.md
 
 Functions and classes
 =====================
