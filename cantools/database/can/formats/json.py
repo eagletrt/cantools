@@ -150,6 +150,8 @@ def get_signal(name, signal, offset: int, types, endianness):
                     offset += 1
                 return (offset, ret)
         else:
+            if signal not in lengths:
+                print(f'missing definition of type: {signal}')
             type = lengths[signal]
 
         if "int" in signal and signal[0] == 'i':
@@ -227,6 +229,8 @@ def load_string(string: str, strict: bool = True,
                 topic_id = ids[message['topic']]['id']
                 topic_name = message['topic']
             else:
+                if 'fixed_id' not in message:
+                    print(f'missing topic in message {message["name"]}')
                 id = message['fixed_id']
                 topic_id = None
                 topic_name = 'FIXED_IDS'
