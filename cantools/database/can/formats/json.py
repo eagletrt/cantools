@@ -16,10 +16,11 @@ from ...utils import (
     SORT_SIGNALS_DEFAULT
 )
 
-MESSAGE_BITS = 6
-TOPIC_BITS = 5
+# Little change to allow generation for new CAN library, TODO: restore the previous configuration 
+MESSAGE_BITS = 8 # old = 6
+TOPIC_BITS = 3 # old = 5
 
-MAX_PRIORITY = 7
+MAX_PRIORITY = 3
 
 MESSAGES_PER_PRIORITY = int(2**MESSAGE_BITS / (MAX_PRIORITY + 1))
 
@@ -80,6 +81,8 @@ def generate_messages_id(topic_messages, topic: int, blacklist=set()):
 
         if message_priority > MAX_PRIORITY:
             raise Exception(f'"{message_name}" out of range (0-{MAX_PRIORITY})')
+
+        message_priority = MAX_PRIORITY - message_priority
 
         if len(message["sending"]) > 1:
             multiple_ids = {}

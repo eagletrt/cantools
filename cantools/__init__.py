@@ -83,7 +83,8 @@ def _main():
 
     args = parser.parse_args()
 
-    if args.debug:
+    # Please leave the debug option always on
+    if True:
         args.func(args)
     else:
         try:
