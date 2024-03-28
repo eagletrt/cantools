@@ -78,11 +78,11 @@ def generate_messages_id(topic_messages, topic: int, blacklist=set()):
     for message in topic_messages:
         message_name = message['name']
         message_priority = message["priority"]
-
-        if message_priority > MAX_PRIORITY:
-            raise Exception(f'"{message_name}" out of range (0-{MAX_PRIORITY})')
-
+        
         message_priority = MAX_PRIORITY - message_priority
+
+        if message_priority > MAX_PRIORITY or message_priority < 0:
+            raise Exception(f'"{message_name}" out of range (0-{MAX_PRIORITY})')
 
         if len(message["sending"]) > 1:
             multiple_ids = {}
