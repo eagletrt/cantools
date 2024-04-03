@@ -20,7 +20,7 @@ UTILS = '''#ifndef {network}_UTILS_H
 #include <stdlib.h>
 #include <string.h>
 #include <stddef.h>
-#include "primary_network.h"
+#include "{network}_network.h"
 
 #ifdef __cplusplus
 extern "C" {{
