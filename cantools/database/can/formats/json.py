@@ -211,7 +211,10 @@ def load_string(string: str, strict: bool = True,
         comment = ''
         cycle_time = None
         if 'interval' in message:
-            cycle_time = message['interval']
+            if message['interval'] == 'oneshot':
+                cycle_time = None
+            else:
+                cycle_time = message['interval']
         if 'description' in message:
             comment = message['description']
         endianness = 'little_endian'

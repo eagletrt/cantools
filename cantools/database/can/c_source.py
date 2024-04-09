@@ -84,6 +84,9 @@ extern "C" {{
 #    define EINVAL 22
 #endif
 
+/* General defines */
+{general_defines}
+
 /* Frame ids. */
 {frame_id_defines}
 
@@ -1856,6 +1859,13 @@ def _generate_frame_cycle_time_defines(database_name, messages, node_name):
             message.cycle_time)
         for message in messages if message.cycle_time is not None and
                                 _is_sender_or_receiver(message, node_name)
+    ] + [
+        '#define {}_{}_CYCLE_TIME_MS ({}_ONESHOT)'.format(
+            database_name.upper(),
+            message.snake_name.upper(),
+            database_name.upper())
+        for message in messages if message.cycle_time is None and
+                                _is_sender_or_receiver(message, node_name)
     ])
 
     return result
@@ -2495,6 +2505,7 @@ def generate(database,
     messages = [Message(message, database_name) for message in database.messages]
     #messages[0]._message._frame_id
     include_guard = f'{database_name.upper()}_H'
+    general_defines = f'#define {database_name.upper()}_ONESHOT (-1)'
     frame_id_defines = _generate_frame_id_defines(database_name, messages, node_name)
     frame_length_defines = _generate_frame_length_defines(database_name,
                                                           messages,
@@ -2526,6 +2537,7 @@ def generate(database,
 
     header = HEADER_FMT.format(version=__version__,
                                date=date,
+                               general_defines=general_defines,
                                include_guard=include_guard,
                                frame_id_defines=frame_id_defines,
                                frame_length_defines=frame_length_defines,
