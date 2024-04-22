@@ -12,25 +12,17 @@ type_to_specifier = {"uint8_t": '%" SCNu8 ","  \n\t\t\t"',
                     "float":    '%f,"       \n\t\t\t"',
                     "double":   '%f,"       \n\t\t\t"'}
 
-UTILS = '''#ifndef {network}_UTILS_H
-#define {network}_UTILS_H
+UTILS = '''#ifndef {network}_UTILS_HPP
+#define {network}_UTILS_HPP
 
 #include <inttypes.h>
-#include <string.h>
 #include <stdlib.h>
-#include <string.h>
 #include <stddef.h>
+#include <vector>
+#include <string>
 #include "{network}_network.h"
 
-#ifdef __cplusplus
-extern "C" {{
-#endif
-
 {body}
-
-#ifdef __cplusplus
-}}
-#endif
 
 #endif
 '''
@@ -172,9 +164,8 @@ COMMENT_ENUM_FIELDS_FROM_NAME = '''
  * 
  * @param[in] msg_name name of the message to find
  * @param[in] sgn_name name of the signal to find
- * @param[out] v array of strings containing the enum fields
  * 
- * @return the number of fields or 0 if the signal is not an enum
+ * @return fields' strings vector
 */
 '''
 
@@ -257,24 +248,25 @@ def _generate_enums_fields(database_name, messages):
     return ENUM_FIELDS.format(database_name, body)
 
 def _generate_enum_fields_from_name(database_name, messages):
-    body = f'int {database_name}_enum_fields_from_name(const char *msg_name, const char *sgn_name, char **v)\n{{\n'
+    body = f'std::vector<std::string> {database_name}_enum_fields_from_name(const std::string& msg_name, const std::string& sgn_name)\n{{\n'
+    body += '\tstd::vector<std::string> ret;\n\n'
     for msg in messages.messages:
-        tmp = f'\tif(!strcmp(msg_name, "{msg.name.upper()}"))\n\t{{\n'
+        tmp = f'\tif(msg_name == {msg.name.upper()})\n\t{{\n'
         contains_enum = False
         for sgn in msg.signals:
             if sgn.choices != None:
                 contains_enum = True
-                tmp += f'\t\tif(!strcmp(sgn_name, "{sgn.name.lower()}"))\n\t\t{{\n'
+                tmp += f'\t\tif(sgn_name == "{sgn.name.lower()}")\n\t\t{{\n'
                 ind = 0
                 for c in sgn.choices:
-                    tmp += f'\t\t\tsprintf(v[{ind}], "{sgn.choices[c]}");\n'
+                    tmp += f'\t\t\tret.push_back("{sgn.choices[c]}");\n'
                     ind += 1
-                tmp += f'\t\t\treturn {ind};\n'
+                tmp += '\t\t\treturn ret;\n'
                 tmp += '\t\t}\n'
         tmp += '\t}\n'
         if contains_enum:
             body += tmp
-    body += '\treturn 0;\n'
+    body += '\n\treturn ret;\n'
     body += '}\n'
     return body
 
@@ -332,7 +324,7 @@ def _fields_types_from_id(database_name, messages):
     return FIELDS_TYPES.format(database_name, body)
 
 
-def generate_c_utils(database_name, messages):
+def generate_cpp_utils(database_name, messages):
     #header = f'#ifndef {database_name.upper()}_UTILS_C_H\n\n#define {database_name.upper()}_UTILS_C_H\n\n'
     #header += f'#include <stddef.h>\n#include "{database_name}_network.h"\n\n'
     #header += '\n\n#endif'
@@ -346,11 +338,11 @@ def generate_c_utils(database_name, messages):
     body += COMMENT_N_FIELDS_FROM_ID
     body += f'int {database_name}_n_fields_from_id(int id);\n'
     body += COMMENT_FIELDS_TYPES_FROM_ID
-    body += f'int {database_name}_fields_types_from_id(int id, int* fields_types, int fields_types_size);\n'
+    body += f'int {database_name}_fields_types_from_id(int id, int *fields_types, int fields_types_size);\n'
     body += COMMENT_ENUM_FIELDS_FROM_NAME
-    body += f'int {database_name}_enum_fields_from_name(const char *msg_name, const char *sgn_name, char **v);\n'
+    body += f'std::vector<std::string> {database_name}_enum_fields_from_name(const std::string& msg_name, const std::string& sgn_name);\n'
     header = UTILS.format(network=database_name, body=body)
-    implementation = f'#include "{database_name}_utils.h"\n\n'
+    implementation = f'#include "{database_name}_utils.hpp"\n\n'
     implementation += _generate_string_fields_from_id(database_name, messages)
     implementation += _generate_enums_fields(database_name, messages)
     implementation += _generate_serialize_from_id(database_name, messages)

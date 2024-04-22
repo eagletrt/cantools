@@ -9,6 +9,7 @@ from ..database.can.proto import generate_proto
 from ..database.can.proto_interface import generate_proto_interface
 from ..database.can.watchdog import generate_watchdog
 from ..database.can.c_utils import generate_c_utils
+from ..database.can.cpp_utils import generate_cpp_utils
 
 LIBPATH = '/lib/{network}/'
 PROTOPATH = '/proto/{network}/'
@@ -99,13 +100,16 @@ def generate_from_db(dbase, database_name, no_floating_point_numbers = False, ge
     filename_proto = database_name + ".proto"
     filename_proto_interface = database_name + "_proto_interface.h"
     filename_dbc = database_name + '.dbc'
-    filename_utils_c = database_name + '_utils_c.h'
-    filename_utils_c_implementation = database_name + '_utils_c.c'
+    filename_utils_c = database_name + '_utils.h'
+    filename_utils_c_implementation = database_name + '_utils.c'
+    filename_utils_cpp = database_name + '_utils.hpp'
+    filename_utils_cpp_implementation = database_name + '_utils.cpp'
 
     proto = generate_proto(dbase, database_name)
     proto_interface = generate_proto_interface(dbase, database_name)
     watchdog, watchdog_implementation = generate_watchdog(dbase, database_name)
     utils_c, utils_c_implementation = generate_c_utils(database_name, dbase)
+    utils_cpp, utils_cpp_implementation = generate_cpp_utils(database_name, dbase)
     
     header, source, fuzzer_source, fuzzer_makefile = generate(
         dbase,
@@ -164,6 +168,16 @@ def generate_from_db(dbase, database_name, no_floating_point_numbers = False, ge
 
     with open(path_utils_c_implementation, 'w') as fout:
         fout.write(utils_c_implementation)
+
+    path_utils_cpp = os.path.join(output_directory+libpath, filename_utils_cpp)
+
+    with open(path_utils_cpp, 'w') as fout:
+        fout.write(utils_cpp)
+
+    path_utils_cpp_implementation = os.path.join(output_directory+libpath, filename_utils_cpp_implementation)
+
+    with open(path_utils_cpp_implementation, 'w') as fout:
+        fout.write(utils_cpp_implementation)
 
     if generate_dbc:
         os.makedirs(output_directory+dbcpath, exist_ok=True)
