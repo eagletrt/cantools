@@ -395,6 +395,7 @@ template <typename T, size_t S, typename IT>
 void inline canlib_circular_buffer<T, S, IT>::clear() {
   head = tail = buffer;
   count = 0;
+  _offset = 0;
 }
 
 template <typename T, size_t S, typename IT>
