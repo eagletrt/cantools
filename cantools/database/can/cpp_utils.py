@@ -158,7 +158,18 @@ COMMENT_FIELDS_TYPES_FROM_ID = '''
 */
 '''
 
-COMMENT_ENUM_FIELDS_FROM_NAME = '''
+COMMENT_ENUM_FIELDS_FROM_MESSAGE = '''
+/**
+ * @brief get the fields of a message that are enums
+ * 
+ * @param[in] msg_name name of the message to find
+ * @param[in] sgn_name name of the signal to find
+ * 
+ * @return fields' strings vector
+*/
+'''
+
+COMMENT_ENUM_NAMES_FROM_FIELDS = '''
 /**
  * @brief get the fields of an enum given the name of the message and the name of the signal
  * 
@@ -247,8 +258,25 @@ def _generate_enums_fields(database_name, messages):
                 enum_id += 1
     return ENUM_FIELDS.format(database_name, body)
 
-def _generate_enum_fields_from_name(database_name, messages):
-    body = f'std::vector<std::string> {database_name}_enum_fields_from_name(const std::string& msg_name, const std::string& sgn_name)\n{{\n'
+def _generate_enum_fields_from_message(database_name, messages):
+    body = f'std::vector<std::string> {database_name}_enum_fields_from_message(const std::string& msg_name)\n{{\n'
+    body += '\tstd::vector<std::string> ret;\n\n'
+    for msg in messages.messages:
+        tmp = f'\tif(msg_name == {msg.name.upper()}) {{\n'
+        contains_enum = False
+        for signal in msg.signals:
+            if signal.choices != None or signal.is_bool:
+                contains_enum = True
+                tmp += f'\t\tret.push_back("{signal.name.lower()}");\n'
+        tmp += '\t}\n'
+        if contains_enum:
+            body += tmp
+    body += '\n\treturn ret;\n'
+    body += '}\n'
+    return body
+
+def _generate_enum_names_from_fields(database_name, messages):
+    body = f'std::vector<std::string> {database_name}_enum_names_from_fields(const std::string& msg_name, const std::string& sgn_name)\n{{\n'
     body += '\tstd::vector<std::string> ret;\n\n'
     for msg in messages.messages:
         tmp = f'\tif(msg_name == {msg.name.upper()})\n\t{{\n'
@@ -339,8 +367,10 @@ def generate_cpp_utils(database_name, messages):
     body += f'int {database_name}_n_fields_from_id(int id);\n'
     body += COMMENT_FIELDS_TYPES_FROM_ID
     body += f'int {database_name}_fields_types_from_id(int id, int *fields_types, int fields_types_size);\n'
-    body += COMMENT_ENUM_FIELDS_FROM_NAME
-    body += f'std::vector<std::string> {database_name}_enum_fields_from_name(const std::string& msg_name, const std::string& sgn_name);\n'
+    body += COMMENT_ENUM_FIELDS_FROM_MESSAGE
+    body += f'std::vector<std::string> {database_name}_enum_fields_from_message(const std::string& msg_name);\n'
+    body += COMMENT_ENUM_NAMES_FROM_FIELDS
+    body += f'std::vector<std::string> {database_name}_enum_names_from_fields(const std::string& msg_name, const std::string& sgn_name);\n'
     header = UTILS.format(network=database_name, body=body)
     implementation = f'#include "{database_name}_utils.hpp"\n\n'
     implementation += _generate_string_fields_from_id(database_name, messages)
@@ -348,7 +378,8 @@ def generate_cpp_utils(database_name, messages):
     implementation += _generate_serialize_from_id(database_name, messages)
     implementation += _get_n_fields(database_name, messages)
     implementation += _fields_types_from_id(database_name, messages)
-    implementation += _generate_enum_fields_from_name(database_name, messages)
+    implementation += _generate_enum_fields_from_message(database_name, messages)
+    implementation += _generate_enum_names_from_fields(database_name, messages)
 
     return header, implementation
 
