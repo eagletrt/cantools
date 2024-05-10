@@ -169,6 +169,12 @@ void {database_name}_devices_deserialize_from_id(
 #endif // CANLIB_TIMESTAMP
 );
 
+int {database_name}_serialize_from_id(
+    void* converted_struct_pointer,
+    uint16_t message_id,
+    uint8_t* data
+);
+
 int {database_name}_message_name_from_id(uint16_t id, char* buffer);
 int {database_name}_index_from_id(uint16_t id);
 int {database_name}_id_from_index(int index);
@@ -470,6 +476,17 @@ void {database_name}_devices_deserialize_from_id(
 {devices_deserialize_body}
     }}
 }}
+int {database_name}_serialize_from_id(
+    void* converted_struct_pointer,
+    uint16_t message_id,
+    uint8_t* data
+)
+{{
+    switch(message_id){{
+{devices_serialize_body}
+    }}
+    return -1;
+}}
 '''
 
 DEVICE_MESSAGE_DESERIALIZE = '''\
@@ -504,6 +521,19 @@ DEVICE_MESSAGE_DESERIALIZE_CONVERSION_COMPONENT = '''
             );
             device->message = device->_converted;
 '''
+DEVICE_MESSAGE_SERIALIZE_CONVERSION = '''
+        case {id}: {{
+            {database_name}_{message_name}_t raw;
+            {database_name}_{message_name}_conversion_to_raw_struct(
+                        ({database_name}_{message_name}_t*) &raw,
+                        ({database_name}_{message_name}_converted_t*) converted_struct_pointer
+            );
+            return {database_name}_{message_name}_pack(data, &raw, {message_length});
+        }}'''
+DEVICE_MESSAGE_SERIALIZE_RAW = '''
+        case {id}: {{
+            return {database_name}_{message_name}_pack(data, ({database_name}_{message_name}_t*) converted_struct_pointer, {message_length});
+        }}'''
 
 NET_ID_IS_MESSAGE_DECLARATION = '''\
 bool {database_name}_id_is_message(uint16_t id);
@@ -663,7 +693,7 @@ int {database_name}_{message_name}_pack(
         return (-EINVAL);
     }}
 
-    memset(&dst_p[0], 0, {message_length});
+    memset(dst_p, 0, {message_length});
 {pack_body}
     return ({message_length});
 }}
@@ -2137,6 +2167,7 @@ def _generate_definitions(database_name, messages: List[Message], floating_point
     devices_new = ''
     devices_free = ''
     devices_deserialize = ''
+    devices_serialize = ''
 
     msg_name_from_id = ''
     index_from_id = ''
@@ -2184,6 +2215,17 @@ def _generate_definitions(database_name, messages: List[Message], floating_point
                                                                 database_name=database_name,
                                                                 message_length=message.length,
                                                                 conversion_component=conversion_comp)
+        if message.has_conversions:
+            devices_serialize += DEVICE_MESSAGE_SERIALIZE_CONVERSION.format(id=message._message._frame_id,
+                                                                message_name=message.snake_name,
+                                                                database_name=database_name,
+                                                                message_length=message.length)
+        else:
+            devices_serialize += DEVICE_MESSAGE_SERIALIZE_RAW.format(id=message._message._frame_id,
+                                                            message_name=message.snake_name,
+                                                            database_name=database_name,
+                                                            message_length=message.length)
+        
         msg_name = message.snake_name
         if message.has_conversions:
             msg_name += "_converted"
@@ -2385,7 +2427,8 @@ def _generate_definitions(database_name, messages: List[Message], floating_point
     definitions.append(DEVICES_DEFINITIONS.format(database_name=database_name,
                                                 devices_new_body=devices_new,
                                                 devices_free_body=devices_free,
-                                                devices_deserialize_body=devices_deserialize))
+                                                devices_deserialize_body=devices_deserialize,
+                                                devices_serialize_body=devices_serialize))
 
     return '\n'.join(definitions), (pack_helper_kinds, unpack_helper_kinds)
 
