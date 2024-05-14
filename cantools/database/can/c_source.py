@@ -1606,14 +1606,25 @@ def _format_unpack_code_signal(database_name,
         if signal.is_enum:
             cast = f'({database_name}_{message.snake_name}_{signal.snake_name})'
 
-        line = fmt.format(signal.snake_name,
-                          '=' if i == 0 else '|=',
-                          cast,
-                          shift_direction,
-                          signal.type_length,
-                          index,
-                          shift,
-                          mask)
+        if (not (signal.is_float or signal.is_signed)) and i != 0:
+            fmt = '    dst_p->{} = {} (dst_p->{} | unpack_{}_shift_u{}(src_p[{}], {}u, 0x{:02x}u));'
+            line = fmt.format(signal.snake_name,
+                            cast,
+                            signal.snake_name,
+                            shift_direction,
+                            signal.type_length,
+                            index,
+                            shift,
+                            mask)
+        else:
+            line = fmt.format(signal.snake_name,
+                            '=' if i == 0 else '|=',
+                            cast,
+                            shift_direction,
+                            signal.type_length,
+                            index,
+                            shift,
+                            mask)
         body_lines.append(line)
         helper_kinds.add((shift_direction, signal.type_length))
 
