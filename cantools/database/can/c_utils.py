@@ -73,7 +73,7 @@ ENUM_FIELDS = '''int {}_enum_fields(int enum_id, char **v, size_t fields_size, s
 }}
 '''
 
-SERIALIZE = '''int {}_serialize_from_id(int id, char *s, uint8_t *data, size_t *size)
+SERIALIZE = '''int {}_serialize_from_string(int id, char *s, uint8_t *data, size_t *size)
 {{
     switch(id)
     {{
@@ -278,7 +278,7 @@ def _generate_enum_fields_from_name(database_name, messages):
     body += '}\n'
     return body
 
-def _generate_serialize_from_id(database_name, messages):
+def _generate_serialize_from_string(database_name, messages):
     ret = ''
     for msg in messages.messages:
         if len(msg.signals) <= 0:
@@ -342,7 +342,7 @@ def generate_c_utils(database_name, messages):
     body += COMMENT_ENUM_FIELDS
     body += f'int {database_name}_enum_fields(int enum_id, char **v, size_t fields_size, size_t string_size);\n'
     body += COMMENT_SERIALIZE_FROM_ID
-    body += f'int {database_name}_serialize_from_id(int id, char *s, uint8_t *data, size_t *size);\n'
+    body += f'int {database_name}_serialize_from_string(int id, char *s, uint8_t *data, size_t *size);\n'
     body += COMMENT_N_FIELDS_FROM_ID
     body += f'int {database_name}_n_fields_from_id(int id);\n'
     body += COMMENT_FIELDS_TYPES_FROM_ID
@@ -353,7 +353,7 @@ def generate_c_utils(database_name, messages):
     implementation = f'#include "{database_name}_utils.h"\n\n'
     implementation += _generate_string_fields_from_id(database_name, messages)
     implementation += _generate_enums_fields(database_name, messages)
-    implementation += _generate_serialize_from_id(database_name, messages)
+    implementation += _generate_serialize_from_string(database_name, messages)
     implementation += _get_n_fields(database_name, messages)
     implementation += _fields_types_from_id(database_name, messages)
     implementation += _generate_enum_fields_from_name(database_name, messages)
