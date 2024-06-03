@@ -61,6 +61,7 @@ extern "C" {{
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include "../canlib_device.h"
 
 #ifndef CANLIB_BUILD
 #define CANLIB_BUILD
@@ -109,56 +110,6 @@ extern "C" {{
 {message_indexes}
 
 #define {database_name}_MESSAGE_COUNT {msg_count}
-
-#ifndef CANLIB_DEVICE_T
-#define CANLIB_DEVICE_T
-typedef struct {{
-    void* message;
-    void* _converted;
-    void* _raw;
-    int _size_raw;
-    int _size_converted;
-}} device_t;
-void device_init(device_t *device);
-void device_preallocate(device_t *device, int bytes);
-void device_free(device_t *device);
-void device_set_address(device_t *device, void* raw, size_t raw_size, void *converted, size_t converted_size);
-#endif // CANLIB_DEVICE_T
-
-#ifdef CANLIB_DEVICE_IMPLEMENTATION
-#undef CANLIB_DEVICE_IMPLEMENTATION
-void device_init(device_t *device) {{
-    device->message = NULL;
-    device->_converted = NULL;
-    device->_raw = NULL;
-    device->_size_raw = 0;
-    device->_size_converted = 0;
-}}
-void device_preallocate(device_t *device, int bytes){{
-    if(device->_size_raw > 0)
-        free(device->_raw);
-    if(device->_size_converted > 0)
-        free(device->_converted);
-    device->_raw = malloc(bytes);
-    device->_converted = malloc(bytes);
-    device->_size_converted = device->_size_raw = bytes;
-}}
-void device_free(device_t *device) {{
-    free(device->_raw);
-    free(device->_converted);
-    device->message = NULL;
-    device->_raw = NULL;
-    device->_converted = NULL;
-    device->_size_raw = 0;
-    device->_size_converted = 0;
-}}
-void device_set_address(device_t *device, void* raw, size_t raw_size, void *converted, size_t converted_size) {{
-    device->_raw = raw;
-    device->_converted = converted;
-    device->_size_raw = raw_size;
-    device->_size_converted = converted_size;
-}}
-#endif // CANLIB_DEVICE_IMPLEMENTATION
 
 void {database_name}_devices_deserialize_from_id(
     device_t* device,
@@ -233,6 +184,62 @@ SOURCE_FMT = '''\
 
 {helpers}\
 {definitions}\
+'''
+
+DEVICES_HEADER='''#ifndef CANLIB_DEVICE_H
+#define CANLIB_DEVICE_H
+
+#include <stddef.h>
+#include <stdlib.h>
+
+typedef struct {
+    void* message;
+    void* _converted;
+    void* _raw;
+    int _size_raw;
+    int _size_converted;
+} device_t;
+void device_init(device_t *device);
+void device_preallocate(device_t *device, int bytes);
+void device_free(device_t *device);
+void device_set_address(device_t *device, void* raw, size_t raw_size, void *converted, size_t converted_size);
+
+#endif // CANLIB_DEVICE_H
+'''
+
+DEVICES_SOURCE='''#include "canlib_device.h"
+
+void device_init(device_t *device) {
+    device->message = NULL;
+    device->_converted = NULL;
+    device->_raw = NULL;
+    device->_size_raw = 0;
+    device->_size_converted = 0;
+}
+void device_preallocate(device_t *device, int bytes){
+    if(device->_size_raw > 0)
+        free(device->_raw);
+    if(device->_size_converted > 0)
+        free(device->_converted);
+    device->_raw = malloc(bytes);
+    device->_converted = malloc(bytes);
+    device->_size_converted = device->_size_raw = bytes;
+}
+void device_free(device_t *device) {
+    free(device->_raw);
+    free(device->_converted);
+    device->message = NULL;
+    device->_raw = NULL;
+    device->_converted = NULL;
+    device->_size_raw = 0;
+    device->_size_converted = 0;
+}
+void device_set_address(device_t *device, void* raw, size_t raw_size, void *converted, size_t converted_size) {
+    device->_raw = raw;
+    device->_converted = converted;
+    device->_size_raw = raw_size;
+    device->_size_converted = converted_size;
+}
 '''
 
 FUZZER_SOURCE_FMT = '''\
@@ -2622,3 +2629,7 @@ def generate(database,
         fuzzer_source_name)
 
     return header, source, fuzzer_source, fuzzer_makefile
+
+
+def generate_devices_sources():
+    return DEVICES_HEADER, DEVICES_SOURCE

@@ -3,7 +3,7 @@ import os
 import os.path
 
 from .. import database
-from ..database.can.c_source import generate
+from ..database.can.c_source import generate, generate_devices_sources
 from ..database.can.c_source import camel_to_snake_case
 from ..database.can.proto import generate_proto
 from ..database.can.proto_interface import generate_proto_interface
@@ -82,6 +82,21 @@ def _do_generate_c_source(args):
     # flatten list of lists
     dbases = [item for sublist in dbases for item in sublist]
     dbases_names = [item for sublist in dbases_names for item in sublist]
+    
+    DEVICES_DIR = args.output_directory+'/lib'
+    os.makedirs(DEVICES_DIR, exist_ok=True)
+    
+    devices_header, devices_source = generate_devices_sources()
+    
+    devices_h = os.path.join(DEVICES_DIR, "canlib_device.h")
+    
+    with open(devices_h, 'w') as fout:
+        fout.write(devices_header)
+
+    devices_c = os.path.join(DEVICES_DIR, "canlib_device.c")
+
+    with open(devices_c, 'w') as fout:
+        fout.write(devices_source)
     
     for dbase, dbase_name in zip(dbases, dbases_names):
         generate_from_db(dbase, dbase_name, args.no_floating_point_numbers, args.generate_fuzzer, args.bit_fields,
