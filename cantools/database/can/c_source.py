@@ -1121,7 +1121,7 @@ class Signal:
 
     @property
     def is_float_conversion(self):
-        return self.is_float or _get(self.scale, '-') % 1 != 0 or self.minimum_value % 1 != 0 or self.maximum_value % 1 != 0
+        return self.is_float or _get(self.scale, '-') != 1 or _get(self.offset, '-') != 0 or self.minimum_value % 1 != 0 or self.maximum_value % 1 != 0
 
     @property
     def minimum_type_value(self):
