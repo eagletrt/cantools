@@ -604,7 +604,7 @@ SIGNAL_DECLARATION_ENCODE_FMT = '''\
  *
  * @return Encoded signal.
  */
-{type_name} {database_name}_{message_name}_{signal_name}_encode({floating_point_type} value);
+{type_name} {database_name}_{message_name}_{signal_name}_encode({conversion_type} value);
 
 '''
 
@@ -633,7 +633,7 @@ SIGNAL_DECLARATION_DECODE_FMT = '''\
  *
  * @return Decoded signal.
  */
-{floating_point_type} {database_name}_{message_name}_{signal_name}_decode({type_name} value);
+{conversion_type} {database_name}_{message_name}_{signal_name}_decode({type_name} value);
 
 '''
 
@@ -771,13 +771,13 @@ void {database_name}_{message_name}_conversion_to_raw_struct(
 SIGNAL_DECLARATION_TO_ = '''    {signal_type} {signal_name},
 '''
 
-SIGNAL_DEFINITION_RAW_TO_CONVERT_STRUCT_FLOAT = '''    conversion->{signal_name} = {database_name}_{message_name}_{signal_name}_decode(raw->{signal_name});
+SIGNAL_DEFINITION_RAW_TO_CONVERT_STRUCT_DECODE = '''    conversion->{signal_name} = {database_name}_{message_name}_{signal_name}_decode(raw->{signal_name});
 '''
-SIGNAL_DEFINITION_CONVERT_TO_RAW_STRUCT_FLOAT = '''    raw->{signal_name} = {database_name}_{message_name}_{signal_name}_encode(conversion->{signal_name});
+SIGNAL_DEFINITION_CONVERT_TO_RAW_STRUCT_ENCODE = '''    raw->{signal_name} = {database_name}_{message_name}_{signal_name}_encode(conversion->{signal_name});
 '''
-SIGNAL_DEFINITION_RAW_TO_CONVERT_FLOAT = '''    conversion->{signal_name} = {database_name}_{message_name}_{signal_name}_decode({signal_name});
+SIGNAL_DEFINITION_RAW_TO_CONVERT_DECODE = '''    conversion->{signal_name} = {database_name}_{message_name}_{signal_name}_decode({signal_name});
 '''
-SIGNAL_DEFINITION_CONVERT_TO_RAW_FLOAT = '''    raw->{signal_name} = {database_name}_{message_name}_{signal_name}_encode({signal_name});
+SIGNAL_DEFINITION_CONVERT_TO_RAW_ENCODE = '''    raw->{signal_name} = {database_name}_{message_name}_{signal_name}_encode({signal_name});
 '''
 
 SIGNAL_DEFINITION_RAW_TO_CONVERT_STRUCT = '''    conversion->{signal_name} = raw->{signal_name};
@@ -790,7 +790,7 @@ SIGNAL_DEFINITION_CONVERT_TO_RAW = '''    raw->{signal_name} = {signal_name};
 '''
 
 SIGNAL_DEFINITION_ENCODE_FMT = '''\
-{type_name} {database_name}_{message_name}_{signal_name}_encode({floating_point_type} value)
+{type_name} {database_name}_{message_name}_{signal_name}_encode({conversion_type} value)
 {{
     return ({type_name})({encode});
 }}
@@ -798,7 +798,7 @@ SIGNAL_DEFINITION_ENCODE_FMT = '''\
 '''
 
 SIGNAL_DEFINITION_DECODE_FMT = '''\
-{floating_point_type} {database_name}_{message_name}_{signal_name}_decode({type_name} value)
+{conversion_type} {database_name}_{message_name}_{signal_name}_decode({type_name} value)
 {{
     return ({decode});
 }}
@@ -1121,7 +1121,10 @@ class Signal:
 
     @property
     def is_float_conversion(self):
-        return self.is_float or _get(self.scale, '-') % 1 != 0 or self.minimum_value % 1 != 0 or self.maximum_value % 1 != 0
+        return self.is_float or _get(self.scale, '1') != 1 or _get(self.offset, '0') % 1 != 0 or self.minimum_value % 1 != 0 or self.maximum_value % 1 != 0
+    @property
+    def is_integer_conversion(self):
+        return (not self.is_float_conversion) and _get(self.offset, '0') != 0
 
     @property
     def minimum_type_value(self):
@@ -1236,7 +1239,7 @@ class Message:
         self.signals = [Signal(signal, self.snake_name, database_name)for signal in message.signals]
         self.has_conversions = False
         for sig in self.signals:
-            if sig.is_float_conversion:
+            if sig.is_float_conversion or sig.is_integer_conversion:
                 self.has_conversions = True
                 break
     
@@ -1794,11 +1797,12 @@ def _generate_encode_decode(message, use_float):
         if offset == 0 and scale == 1:
             encoding = 'value'
             decoding = f'({floating_point_type})value'
+        elif scale == 1 and offset != 0 and offset % 1 == 0:
+            encoding = f'value - {offset}'
+            decoding = f'value + {offset}'
         elif offset != 0 and scale != 1:
-            encoding = '(value - {}) / {}'.format(formatted_offset,
-                                                  formatted_scale)
-            decoding = '(({})value * {}) + {}'.format(floating_point_type, formatted_scale,
-                                                      formatted_offset)
+            encoding = f'(value - {formatted_offset}) / {formatted_scale}'
+            decoding = f'(({floating_point_type})value * {formatted_scale}) + {formatted_offset}'
         elif offset != 0:
             encoding = f'value - {formatted_offset}'
             decoding = f'({floating_point_type})value + {formatted_offset}'
@@ -2092,14 +2096,29 @@ def _generate_declarations(database_name, messages: List[Message], floating_poin
                         message_name=message.snake_name,
                         signal_name=signal.snake_name,
                         type_name=signal.type_name,
-                        floating_point_type=_get_floating_point_type(use_float))
+                        conversion_type=_get_floating_point_type(use_float))
                 if node_name is None or _is_receiver(signal, node_name):
                     signal_declaration += SIGNAL_DECLARATION_DECODE_FMT.format(
                         database_name=database_name,
                         message_name=message.snake_name,
                         signal_name=signal.snake_name,
                         type_name=signal.type_name,
-                        floating_point_type=_get_floating_point_type(use_float))
+                        conversion_type=_get_floating_point_type(use_float))
+            if signal.is_integer_conversion:
+                if is_sender:
+                    signal_declaration += SIGNAL_DECLARATION_ENCODE_FMT.format(
+                        database_name=database_name,
+                        message_name=message.snake_name,
+                        signal_name=signal.snake_name,
+                        type_name=signal.type_name,
+                        conversion_type=signal.type_name)
+                if node_name is None or _is_receiver(signal, node_name):
+                    signal_declaration += SIGNAL_DECLARATION_DECODE_FMT.format(
+                        database_name=database_name,
+                        message_name=message.snake_name,
+                        signal_name=signal.snake_name,
+                        type_name=signal.type_name,
+                        conversion_type=signal.type_name)
             if is_sender or _is_receiver(signal, node_name):
                 signal_declaration += SIGNAL_DECLARATION_IS_IN_RANGE_FMT.format(
                     database_name=database_name,
@@ -2323,18 +2342,18 @@ def _generate_definitions(database_name, messages: List[Message], floating_point
 
             if floating_point_numbers and signal.is_float_conversion:
                 signals_specifiers += SIGNAL_DEFINITION_SPECIFIER.format(specifier = type_to_specifier["float"])
-                message_raw_to_conversion += SIGNAL_DEFINITION_RAW_TO_CONVERT_FLOAT.format(signal_name=signal.snake_name,
+                message_raw_to_conversion += SIGNAL_DEFINITION_RAW_TO_CONVERT_DECODE.format(signal_name=signal.snake_name,
                                                                     database_name=database_name,
                                                                     message_name=message.snake_name)
-                message_conversion_to_raw += SIGNAL_DEFINITION_CONVERT_TO_RAW_FLOAT.format(signal_name=signal.snake_name,
+                message_conversion_to_raw += SIGNAL_DEFINITION_CONVERT_TO_RAW_ENCODE.format(signal_name=signal.snake_name,
                                                                     database_name=database_name,
                                                                     message_name=message.snake_name)
                                  
-                message_raw_to_conversion_struct += SIGNAL_DEFINITION_RAW_TO_CONVERT_STRUCT_FLOAT.format(signal_name=signal.snake_name,
+                message_raw_to_conversion_struct += SIGNAL_DEFINITION_RAW_TO_CONVERT_STRUCT_DECODE.format(signal_name=signal.snake_name,
                                                                     database_name=database_name,
                                                                     message_name=message.snake_name)
 
-                message_conversion_to_raw_struct += SIGNAL_DEFINITION_CONVERT_TO_RAW_STRUCT_FLOAT.format(signal_name=signal.snake_name,
+                message_conversion_to_raw_struct += SIGNAL_DEFINITION_CONVERT_TO_RAW_STRUCT_ENCODE.format(signal_name=signal.snake_name,
                                                                     database_name=database_name,
                                                                     message_name=message.snake_name)
                 if is_sender:
@@ -2345,7 +2364,7 @@ def _generate_definitions(database_name, messages: List[Message], floating_point
                         signal_name=signal.snake_name,
                         type_name=signal.type_name,
                         encode=encode,
-                        floating_point_type=_get_floating_point_type(use_float))
+                        conversion_type=_get_floating_point_type(use_float))
                 if node_name is None or _is_receiver(signal, node_name):
                     signal_definition += SIGNAL_DEFINITION_DECODE_FMT.format(
                         database_name=database_name,
@@ -2353,9 +2372,43 @@ def _generate_definitions(database_name, messages: List[Message], floating_point
                         signal_name=signal.snake_name,
                         type_name=signal.type_name,
                         decode=decode,
-                        floating_point_type=_get_floating_point_type(use_float))
+                        conversion_type=_get_floating_point_type(use_float))
 
-            if not signal.is_float_conversion:
+            if signal.is_integer_conversion:
+                signals_specifiers += SIGNAL_DEFINITION_SPECIFIER.format(specifier = type_to_specifier[signal.type_name])
+                message_raw_to_conversion += SIGNAL_DEFINITION_RAW_TO_CONVERT_DECODE.format(signal_name=signal.snake_name,
+                                                                    database_name=database_name,
+                                                                    message_name=message.snake_name)
+                message_conversion_to_raw += SIGNAL_DEFINITION_CONVERT_TO_RAW_ENCODE.format(signal_name=signal.snake_name,
+                                                                    database_name=database_name,
+                                                                    message_name=message.snake_name)
+                                 
+                message_raw_to_conversion_struct += SIGNAL_DEFINITION_RAW_TO_CONVERT_STRUCT_DECODE.format(signal_name=signal.snake_name,
+                                                                    database_name=database_name,
+                                                                    message_name=message.snake_name)
+
+                message_conversion_to_raw_struct += SIGNAL_DEFINITION_CONVERT_TO_RAW_STRUCT_ENCODE.format(signal_name=signal.snake_name,
+                                                                    database_name=database_name,
+                                                                    message_name=message.snake_name)
+                if is_sender:
+
+                    signal_definition += SIGNAL_DEFINITION_ENCODE_FMT.format(
+                        database_name=database_name,
+                        message_name=message.snake_name,
+                        signal_name=signal.snake_name,
+                        type_name=signal.type_name,
+                        encode=encode,
+                        conversion_type=signal.type_name)
+                if node_name is None or _is_receiver(signal, node_name):
+                    signal_definition += SIGNAL_DEFINITION_DECODE_FMT.format(
+                        database_name=database_name,
+                        message_name=message.snake_name,
+                        signal_name=signal.snake_name,
+                        type_name=signal.type_name,
+                        decode=decode,
+                        conversion_type=signal.type_name)
+
+            if not (signal.is_float_conversion or signal.is_integer_conversion):
                 signals_specifiers += SIGNAL_DEFINITION_SPECIFIER.format(specifier = type_to_specifier[signal.type_name])
                 message_raw_to_conversion_struct += SIGNAL_DEFINITION_RAW_TO_CONVERT_STRUCT.format(signal_name=signal.snake_name)
                 message_conversion_to_raw_struct += SIGNAL_DEFINITION_CONVERT_TO_RAW_STRUCT.format(signal_name=signal.snake_name)
