@@ -2233,13 +2233,7 @@ def _generate_definitions(database_name, messages: List[Message], floating_point
                                                                 database_name=database_name,
                                                                 message_length=message.length,
                                                                 conversion_component=conversion_comp)
-        if message.has_conversions:
-            devices_serialize += DEVICE_MESSAGE_SERIALIZE_CONVERSION.format(id=message._message._frame_id,
-                                                                message_name=message.snake_name,
-                                                                database_name=database_name,
-                                                                message_length=message.length)
-        else:
-            devices_serialize += DEVICE_MESSAGE_SERIALIZE_RAW.format(id=message._message._frame_id,
+        devices_serialize += DEVICE_MESSAGE_SERIALIZE_CONVERSION.format(id=message._message._frame_id,
                                                             message_name=message.snake_name,
                                                             database_name=database_name,
                                                             message_length=message.length)
