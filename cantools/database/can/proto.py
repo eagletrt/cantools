@@ -61,7 +61,7 @@ def _generate_enums(database_name, messages):
 def _generate_messages(database_name, messages):
     ret = ""
     for msg in messages:
-        ret += f"message {msg.name}{{\n"
+        ret += f"message {msg.name.upper()}{{\n"
         i = 1
         for signal in msg.signals:
             ret += "\t"
@@ -74,7 +74,7 @@ def _generate_messages(database_name, messages):
 def _generate_pack(database_name, messages):
     ret = "message Pack{\n"
     for i, msg in enumerate(messages):
-        ret += f"\trepeated {msg.name} {msg.name} = {i+1};\n"
+        ret += f"\trepeated {msg.name.upper()} {msg.name.upper()} = {i+1};\n"
     ret += "}\n"
     return ret
 
