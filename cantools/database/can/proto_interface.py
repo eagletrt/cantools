@@ -507,16 +507,7 @@ template <Pushable T> void pushImpl(T circOrVec, typename T::value_type val) {{
 
 #endif // CANLIB_PROTO_INTERFACE_TYPES
 
-void inline {db_name}_proto_interface_serialize_from_id(canlib_message_id id, {db_name}::Pack* pack, device_t* device);
-template <Uint64Buffer uint_buffer, FloatBuffer double_buffer,
-          StringBuffer string_buffer>
-void {db_name}_proto_interface_deserialize(
-    {db_name}::Pack* pack,
-    net_enums<uint_buffer> &net_enums,
-    net_signals<double_buffer> &net_signals,
-    net_strings<string_buffer> &net_strings, uint64_t resample_us);
-
-#ifdef {db_name}_PROTO_INTERAFCE_IMPLEMENTATION
+void {db_name}_proto_interface_serialize_from_id(canlib_message_id id, {db_name}::Pack* pack, device_t* device);
 
 template <Uint64Buffer uint_buffer, FloatBuffer double_buffer,
           StringBuffer string_buffer>
@@ -528,6 +519,9 @@ void {db_name}_proto_interface_deserialize(
   char buffer[1024];
   {deserialize}
 }}
+
+
+#ifdef {db_name}_PROTO_INTERAFCE_IMPLEMENTATION
 
 void {db_name}_proto_interface_serialize_from_id(canlib_message_id id, {db_name}::Pack* pack, device_t* device) {{
     int index = {db_name}_index_from_id(id);
