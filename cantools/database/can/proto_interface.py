@@ -413,6 +413,7 @@ PROTO_INTERFACE = '''
 #include <string>
 #include <unordered_map>
 #include <functional>
+#include <concepts>
 
 #include "{db_name}.pb.h"
 
@@ -447,37 +448,85 @@ typedef uint16_t canlib_message_id;
 *  messages names are unique.
 **/
 
-typedef std::string field_name;
-typedef std::string messages_name;
-typedef canlib_circular_buffer<double,      CANLIB_CIRCULAR_BUFFER_SIZE> double_buffer;
-typedef canlib_circular_buffer<uint64_t,    CANLIB_CIRCULAR_BUFFER_SIZE> uint64_buffer;
-typedef canlib_circular_buffer<std::string, CANLIB_CIRCULAR_BUFFER_SIZE> string_buffer;
+template <typename T, typename U>
+concept HasValueTypeOf = requires {{ typename T::value_type; }} &&
+                         std::same_as<typename T::value_type, U>;
+
+template <typename T>
+concept Pushable = requires(T container, typename T::value_type value) {{
+  {{ container.push(value) }} -> std::same_as<void>;
+}};
+template <typename T>
+concept PushBackable = requires(T container, typename T::value_type value) {{
+  {{ container.push_back(value) }} -> std::same_as<void>;
+}};
+
+template <typename T>
+concept Buffer =
+    requires {{ typename T::value_type; }} && (Pushable<T> || PushBackable<T>);
+
+template <typename T>
+concept Uint64Buffer = Buffer<T> && HasValueTypeOf<T, uint64_t>;
+template <typename T>
+concept FloatBuffer =
+    Buffer<T> && std::is_floating_point_v<typename T::value_type>;
+template <typename T>
+concept StringBuffer = Buffer<T> && HasValueTypeOf<T, std::string>;
+
+using field_name = std::string;
+using messages_name = std::string;
 
 // structure contains all the messages with a enum value associated
-// the type is unified to uint64_t
-typedef std::unordered_map<field_name,    uint64_buffer> message_enums;
-typedef std::unordered_map<messages_name, message_enums> network_enums;
+template <Uint64Buffer uint_buffer>
+using msg_enums = std::unordered_map<field_name, uint_buffer>;
+template <Uint64Buffer uint_buffer>
+using net_enums = std::unordered_map<messages_name, msg_enums<uint_buffer>>;
 
 // structure contains all the messages with a signal associated
-// the type is unified to double
-typedef std::unordered_map<field_name,    double_buffer>   message_signals;
-typedef std::unordered_map<messages_name, message_signals> network_signals;
+template <FloatBuffer double_buffer>
+using msg_signals = std::unordered_map<field_name, double_buffer>;
+template <FloatBuffer double_buffer>
+using net_signals =
+    std::unordered_map<messages_name, msg_signals<double_buffer>>;
 
 // structure contains all the messages with a string associated
-// the type is unified to string
-typedef std::unordered_map<field_name,    string_buffer>   message_strings;
-typedef std::unordered_map<messages_name, message_strings> network_strings;
+template <StringBuffer string_buffer>
+using msg_strings = std::unordered_map<field_name, string_buffer>;
+template <StringBuffer string_buffer>
+using net_strings =
+    std::unordered_map<messages_name, msg_strings<string_buffer>>;
+
+template <PushBackable T>
+void pushImpl(T circOrVec, typename T::value_type val) {{
+  circOrVec.push_back(val);
+}}
+
+template <Pushable T> void pushImpl(T circOrVec, typename T::value_type val) {{
+  circOrVec.push(val);
+}}
 
 #endif // CANLIB_PROTO_INTERFACE_TYPES
 
-void {db_name}_proto_interface_serialize_from_id(canlib_message_id id, {db_name}::Pack* pack, device_t* device);
-void {db_name}_proto_interface_deserialize({db_name}::Pack* pack, network_enums* net_enums, network_signals* net_signals, network_strings* net_strings, uint64_t resample_us);
+void inline {db_name}_proto_interface_serialize_from_id(canlib_message_id id, {db_name}::Pack* pack, device_t* device);
+template <Uint64Buffer uint_buffer, FloatBuffer double_buffer,
+          StringBuffer string_buffer>
+void {db_name}_proto_interface_deserialize(
+    {db_name}::Pack* pack,
+    net_enums<uint_buffer> &net_enums,
+    net_signals<double_buffer> &net_signals,
+    net_strings<string_buffer> &net_strings, uint64_t resample_us);
 
 #ifdef {db_name}_PROTO_INTERAFCE_IMPLEMENTATION
 
-void {db_name}_proto_interface_deserialize({db_name}::Pack* pack, network_enums* net_enums, network_signals* net_signals, network_strings* net_strings, uint64_t resample_us) {{
-    char buffer[1024];
-    {deserialize}
+template <Uint64Buffer uint_buffer, FloatBuffer double_buffer,
+          StringBuffer string_buffer>
+void {db_name}_proto_interface_deserialize(
+    {db_name}::Pack* pack,
+    net_enums<uint_buffer> &net_enums,
+    net_signals<double_buffer> &net_signals,
+    net_strings<string_buffer> &net_strings, uint64_t resample_us) {{
+  char buffer[1024];
+  {deserialize}
 }}
 
 void {db_name}_proto_interface_serialize_from_id(canlib_message_id id, {db_name}::Pack* pack, device_t* device) {{
@@ -503,19 +552,19 @@ DESERIALIZE_MESSAGE = '''
         static uint64_t last_timestamp = 0;
         if(pack->{name}(i)._inner_timestamp() - last_timestamp < resample_us) continue;
         else last_timestamp = pack->{name}(i)._inner_timestamp();
-        (*net_signals)["{name_m}"]["_timestamp"].push(pack->{name}(i)._inner_timestamp());
+        pushImpl(net_enums["{name_m}"]["_timestamp"], pack->{name}(i)._inner_timestamp());
 #endif // CANLIB_TIMESTAMP
 
 {signals}
     }}
 '''
-DESERIALIZE_SIGNAL = '''\t\t(*net_signals)["{name_m}"]["{signal_name}"].push(pack->{name}(i).{signal_name}());
+DESERIALIZE_SIGNAL = '''\t\tpushImpl(net_signals["{name_m}"]["{signal_name}"], pack->{name}(i).{signal_name}());
 '''
-DESERIALIZE_SIGNAL_ENUM = '''\t\t(*net_enums)["{name_m}"]["{signal_name}"].push(pack->{name}(i).{signal_name}());
+DESERIALIZE_SIGNAL_ENUM = '''\t\tpushImpl(net_enums["{name_m}"]["{signal_name}"], pack->{name}(i).{signal_name}());
 \t\t{database_name}_{name}_{signal_name}_enum_to_string(({database_name}_{name}_{signal_name})pack->{name}(i).{signal_name}(), buffer);
-\t\t(*net_strings)["{name_m}"]["{signal_name}"].push(buffer);
+\t\tpushImpl(net_strings["{name_m}"]["{signal_name}"], buffer);
 '''
-DESERIALIZE_SIGNAL_BITSET = '''\t\t(*net_enums)["{name_m}"]["{signal_name}"].push(pack->{name}(i).{signal_name}());
+DESERIALIZE_SIGNAL_BITSET = '''\t\tpushImpl(net_enums["{name_m}"]["{signal_name}"], pack->{name}(i).{signal_name}());
 '''
 
 SERIALIZE_MESSAGE = '''
