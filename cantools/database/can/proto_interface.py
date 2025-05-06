@@ -497,11 +497,11 @@ using net_strings =
     std::unordered_map<messages_name, msg_strings<string_buffer>>;
 
 template <PushBackable T>
-void pushImpl(T circOrVec, typename T::value_type val) {{
+void pushImpl(T &circOrVec, typename T::value_type val) {{
   circOrVec.push_back(val);
 }}
 
-template <Pushable T> void pushImpl(T circOrVec, typename T::value_type val) {{
+template <Pushable T> void pushImpl(T &circOrVec, typename T::value_type val) {{
   circOrVec.push(val);
 }}
 
@@ -546,7 +546,7 @@ DESERIALIZE_MESSAGE = '''
         static uint64_t last_timestamp = 0;
         if(pack->{name}(i)._inner_timestamp() - last_timestamp < resample_us) continue;
         else last_timestamp = pack->{name}(i)._inner_timestamp();
-        pushImpl(net_enums["{name_m}"]["_timestamp"], pack->{name}(i)._inner_timestamp());
+        pushImpl(net_signals["{name_m}"]["_timestamp"], double(pack->{name}(i)._inner_timestamp()));
 #endif // CANLIB_TIMESTAMP
 
 {signals}
